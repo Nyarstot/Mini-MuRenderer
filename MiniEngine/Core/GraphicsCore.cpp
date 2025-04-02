@@ -50,6 +50,8 @@ namespace Graphics
     bool g_bTypedUAVLoadSupport_R16G16B16A16_FLOAT = false;
 
     ID3D12Device* g_Device = nullptr;
+    ID3D12Device* g_SecondaryDevice = nullptr;
+
     CommandListManager g_CommandManager;
     ContextManager g_ContextManager;
 
@@ -66,6 +68,7 @@ namespace Graphics
     static const uint32_t vendorID_Nvidia   = 0x10DE;
     static const uint32_t vendorID_AMD      = 0x1002;
     static const uint32_t vendorID_Intel    = 0x8086;
+    SIZE_T maxDMemSize = 0;
 
     uint32_t GetDesiredGPUVendor()
     {
@@ -164,6 +167,7 @@ namespace Graphics
 void Graphics::Initialize(bool RequireDXRSupport)
 {
     Microsoft::WRL::ComPtr<ID3D12Device> pDevice;
+    Microsoft::WRL::ComPtr<ID3D12Device> pSecondaryDevice;
 
     uint32_t useDebugLayers = 0;
     CommandLineArgs::GetInteger(L"debug", useDebugLayers);
@@ -224,11 +228,14 @@ void Graphics::Initialize(bool RequireDXRSupport)
 
     // Create the D3D graphics device
     Microsoft::WRL::ComPtr<IDXGIAdapter1> pAdapter;
+    Microsoft::WRL::ComPtr<IDXGIAdapter1> pSecondaryAdapter;
 
     uint32_t bUseWarpDriver = false;
     CommandLineArgs::GetInteger(L"warp", bUseWarpDriver);
 
+    // Get primary vendor
     uint32_t desiredVendor = GetDesiredGPUVendor();
+    uint32_t secondaryVendor = vendorID_Intel;
 
     if (desiredVendor)
     {
@@ -238,10 +245,12 @@ void Graphics::Initialize(bool RequireDXRSupport)
     // Temporary workaround because SetStablePowerState() is crashing
     D3D12EnableExperimentalFeatures(0, nullptr, nullptr, nullptr);
 
+    bool multiGpuAllowed = true;
     if (!bUseWarpDriver)
     {
         SIZE_T MaxSize = 0;
 
+        // Create primary device
         for (uint32_t Idx = 0; DXGI_ERROR_NOT_FOUND != dxgiFactory->EnumAdapters1(Idx, &pAdapter); ++Idx)
         {
             DXGI_ADAPTER_DESC1 desc;
@@ -274,7 +283,36 @@ void Graphics::Initialize(bool RequireDXRSupport)
 
             g_Device = pDevice.Detach();
 
-            Utility::Printf(L"Selected GPU:  %s (%u MB)\n", desc.Description, desc.DedicatedVideoMemory >> 20);
+            Utility::Printf(L"Selected primary GPU:  %s (%u MB)\n", desc.Description, desc.DedicatedVideoMemory >> 20);
+        }
+
+        // Create secondary device if allowed
+        if (multiGpuAllowed) {
+
+            for (uint32_t Idx = 0; DXGI_ERROR_NOT_FOUND != dxgiFactory->EnumAdapters1(Idx, &pSecondaryAdapter); ++Idx)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                pSecondaryAdapter->GetDesc1(&desc);
+
+                // Is a software adapter?
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                    continue;
+
+                // Is this the desired vendor desired?
+                if (secondaryVendor != 0 && secondaryVendor != desc.VendorId)
+                    continue;
+
+                // Can create a D3D12 device?
+                if (FAILED(D3D12CreateDevice(pSecondaryAdapter.Get(), D3D_FEATURE_LEVEL_11_0, MY_IID_PPV_ARGS(&pSecondaryDevice))))
+                    continue;
+
+                if (g_SecondaryDevice != nullptr)
+                    g_SecondaryDevice->Release();
+
+                g_SecondaryDevice = pSecondaryDevice.Detach();
+
+                Utility::Printf(L"Selected secondary GPU:  %s (%u MB)\n", desc.Description, desc.DedicatedVideoMemory >> 20);
+            }
         }
     }
 
@@ -440,11 +478,25 @@ void Graphics::Shutdown( void )
     Display::Shutdown();
 
 #if defined(_GAMING_DESKTOP) && defined(_DEBUG)
-    ID3D12DebugDevice* debugInterface;
-    if (SUCCEEDED(g_Device->QueryInterface(&debugInterface)))
+
+    // Primary debug interface
     {
-        debugInterface->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
-        debugInterface->Release();
+        ID3D12DebugDevice* debugInterface;
+        if (SUCCEEDED(g_Device->QueryInterface(&debugInterface)))
+        {
+            debugInterface->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
+            debugInterface->Release();
+        }
+    }
+
+    // Secondary debug interface
+    {
+        ID3D12DebugDevice* debugInterface;
+        if (SUCCEEDED(g_SecondaryDevice->QueryInterface(&debugInterface)))
+        {
+            debugInterface->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
+            debugInterface->Release();
+        }
     }
 #endif
 
@@ -453,4 +505,11 @@ void Graphics::Shutdown( void )
         g_Device->Release();
         g_Device = nullptr;
     }
+
+    if (g_SecondaryDevice != nullptr)
+    {
+        g_SecondaryDevice->Release();
+        g_SecondaryDevice = nullptr;
+    }
 }
+

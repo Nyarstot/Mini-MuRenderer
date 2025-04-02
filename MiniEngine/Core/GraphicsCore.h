@@ -37,6 +37,7 @@ namespace Graphics
     bool IsDeviceIntel(ID3D12Device* pDevice);
 
     extern ID3D12Device* g_Device;
+    extern ID3D12Device* g_SecondaryDevice;
     extern CommandListManager g_CommandManager;
     extern ContextManager g_ContextManager;
 
