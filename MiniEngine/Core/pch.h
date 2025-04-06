@@ -65,6 +65,7 @@
 #include <string>
 #include <cwctype>
 #include <exception>
+#include <unordered_map>
 
 #include <ppltasks.h>
 #include <functional>

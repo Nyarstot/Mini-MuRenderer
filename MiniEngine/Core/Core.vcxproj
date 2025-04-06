@@ -117,6 +117,10 @@
     <ClInclude Include="EngineTuning.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="ReadbackBuffer.h" />
+    <ClInclude Include="RenderGraph\Base\BaseGraph.h" />
+    <ClInclude Include="RenderGraph\RenderGraph.h" />
+    <ClInclude Include="RenderGraph\RenderGraphResource.h" />
+    <ClInclude Include="RenderGraph\RenderPass.h" />
     <ClInclude Include="RootSignature.h" />
     <ClInclude Include="SamplerManager.h" />
     <ClInclude Include="ShadowBuffer.h" />
@@ -130,6 +134,7 @@
     <ClInclude Include="UploadBuffer.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="Util\CommandLineArg.h" />
+    <ClInclude Include="Util\D3D12Utils.h" />
     <ClInclude Include="VectorMath.h" />
   </ItemGroup>
   <ItemGroup>
@@ -177,6 +182,9 @@
     <ClCompile Include="PostEffects.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="ReadbackBuffer.cpp" />
+    <ClCompile Include="RenderGraph\RenderGraph.cpp" />
+    <ClCompile Include="RenderGraph\RenderGraphResource.cpp" />
+    <ClCompile Include="RenderGraph\RenderPass.cpp" />
     <ClCompile Include="RootSignature.cpp" />
     <ClCompile Include="SamplerManager.cpp" />
     <ClCompile Include="ShadowBuffer.cpp" />
@@ -190,6 +198,7 @@
     <ClCompile Include="UploadBuffer.cpp" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="Util\CommandLineArg.cpp" />
+    <ClCompile Include="Util\D3D12Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\AdaptExposureCS.hlsl" />
@@ -437,8 +446,9 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\Packages\WinPixEventRuntime.1.0.210209001\Include\WinPixEventRuntime;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\Packages\WinPixEventRuntime.1.0.210209001\Include\WinPixEventRuntime;..\..\Packages\CXXGraph\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_GAMING_DESKTOP;__WRL_NO_DEFAULT_LIB__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdcpp14</LanguageStandard>
     </ClCompile>
   </ItemDefinitionGroup>
   <ImportGroup Label="ExtensionTargets">
