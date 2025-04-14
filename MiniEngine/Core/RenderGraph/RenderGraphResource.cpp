@@ -28,4 +28,13 @@ namespace RenderGraph
     {
         m_resource = resource;
     }
+
+    nlohmann::json RenderGraphEdgeResourceData::Serialize() const
+    {
+        nlohmann::json json;
+        json["required_state"] = static_cast<int>(requiredState);
+        (resource != nullptr) ? json["resource"] = resource->GetName() : json["resource"] = nullptr;
+
+        return json;
+    }
 }

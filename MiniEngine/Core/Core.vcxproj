@@ -91,6 +91,7 @@
     <ClInclude Include="GraphRenderer.h" />
     <ClInclude Include="Hash.h" />
     <ClInclude Include="ImageScaling.h" />
+    <ClInclude Include="json.hpp" />
     <ClInclude Include="LinearAllocator.h" />
     <ClInclude Include="Math\BoundingBox.h" />
     <ClInclude Include="Math\BoundingPlane.h" />
@@ -120,6 +121,7 @@
     <ClInclude Include="RenderGraph\Base\BaseGraph.h" />
     <ClInclude Include="RenderGraph\Passes\LambdaRenderPass.h" />
     <ClInclude Include="RenderGraph\RenderGraph.h" />
+    <ClInclude Include="RenderGraph\RenderGraphBuilder.h" />
     <ClInclude Include="RenderGraph\RenderGraphResource.h" />
     <ClInclude Include="RenderGraph\RenderPass.h" />
     <ClInclude Include="RootSignature.h" />
@@ -136,6 +138,7 @@
     <ClInclude Include="Utility.h" />
     <ClInclude Include="Util\CommandLineArg.h" />
     <ClInclude Include="Util\D3D12Utils.h" />
+    <ClInclude Include="Util\StringUtils.h" />
     <ClInclude Include="VectorMath.h" />
   </ItemGroup>
   <ItemGroup>
@@ -185,6 +188,7 @@
     <ClCompile Include="ReadbackBuffer.cpp" />
     <ClCompile Include="RenderGraph\Passes\LambdaRenderPass.cpp" />
     <ClCompile Include="RenderGraph\RenderGraph.cpp" />
+    <ClCompile Include="RenderGraph\RenderGraphBuilder.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphResource.cpp" />
     <ClCompile Include="RenderGraph\RenderPass.cpp" />
     <ClCompile Include="RootSignature.cpp" />
@@ -201,6 +205,7 @@
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="Util\CommandLineArg.cpp" />
     <ClCompile Include="Util\D3D12Utils.cpp" />
+    <ClCompile Include="Util\StringUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\AdaptExposureCS.hlsl" />

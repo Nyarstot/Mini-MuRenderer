@@ -62,9 +62,6 @@
     <ClInclude Include="TextureConvert.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="json.hpp">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="ParticleEffects.h">
       <Filter>Source Files</Filter>
     </ClInclude>

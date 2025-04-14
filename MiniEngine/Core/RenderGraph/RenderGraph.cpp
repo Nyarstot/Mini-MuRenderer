@@ -1,5 +1,8 @@
 #include "pch.h"
 #include "RenderGraph/RenderGraph.h"
+#include "Util/StringUtils.h"
+
+#include <fstream>
 
 
 namespace RenderGraph
@@ -83,6 +86,72 @@ namespace RenderGraph
     {
         BaseGraph<RenderPass, RenderGraphEdgeResourceData>::Clear();
         m_resources.clear();
+    }
+
+    nlohmann::json RenderGraph::Serialize() const
+    {
+        nlohmann::json json;
+
+        // Serialize resources
+
+        nlohmann::json resourcesJson;
+        for (const auto& resource : m_resources) {
+            const auto& desc = resource.second->GetDescription();
+            const auto& name = resource.first;
+
+            nlohmann::json resourceJson;
+            resourceJson["type"]            = static_cast<int>(desc.type);
+            resourceJson["format"]          = static_cast<int>(desc.format);
+            resourceJson["height"]          = desc.height;
+            resourceJson["width"]           = desc.width;
+            resourceJson["depth"]           = desc.depth;
+            resourceJson["mip_levels"]      = desc.mipLevels;
+            resourceJson["array_size"]      = desc.arraySize;
+            resourceJson["sample_count"]    = desc.sampleCount;
+            resourceJson["flags"]           = static_cast<int>(desc.flags);
+            resourceJson["initial_state"]   = static_cast<int>(desc.initialState);
+
+            resourcesJson[StringUtils::WideToNarrow(name)] = resourceJson;
+        }
+        json["resources"] = resourcesJson;
+
+        // Serialize nodes
+        nlohmann::json nodesJson;
+        for (std::size_t i = 0; i < this->GetNodeCount(); ++i) {
+            const auto& node = GetNode(i);
+            nlohmann::json nodeJson;
+
+            nodeJson["name"] = StringUtils::WideToNarrow(node.data->GetName());
+            nodeJson["type"] = typeid(*node.data).name();
+
+            // Serialize output edges
+            nlohmann::json edgesJson;
+            for (std::size_t edgeId : node.outputEdges) {
+                const auto& edge = GetEdge(edgeId);
+                nlohmann::json edgeJson;
+
+                edgeJson["to_node"] = edge.toNode;
+                edgeJson["data"]    = edge.data->Serialize();
+                edgesJson.push_back(edgeJson);
+            }
+            nodeJson["output_edges"] = edgesJson;
+            nodesJson.push_back(nodeJson);
+        }
+        json["nodes"] = nodesJson;
+
+        // Serialize execution order
+        if (!m_executionOrder.empty()) {
+            json["execution_order"] = m_executionOrder;
+        }
+
+        return json;
+    }
+
+    void RenderGraph::ExportToJSON() const
+    {
+        std::ofstream out("render_graph.json");
+        out << this->Serialize().dump();
+        out.close();
     }
 
     D3D12_RESOURCE_STATES RenderGraph::GetCurrentState(const std::shared_ptr<RenderGraphResource>& resource) const

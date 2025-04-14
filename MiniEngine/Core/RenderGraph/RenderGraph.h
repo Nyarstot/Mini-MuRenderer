@@ -1,5 +1,7 @@
 #pragma once
 
+#include "json.hpp"
+
 #include "RenderGraph/Base/BaseGraph.h"
 #include "RenderGraph/RenderGraphResource.h"
 #include "RenderGraph/RenderPass.h"
@@ -21,6 +23,9 @@ namespace RenderGraph
         void Compile();
         void Execute(ID3D12GraphicsCommandList* commandList);
         void Clear();
+
+        nlohmann::json Serialize() const;
+        void ExportToJSON() const;
 
         D3D12_RESOURCE_STATES GetCurrentState(const std::shared_ptr<RenderGraphResource>& resource) const;
 

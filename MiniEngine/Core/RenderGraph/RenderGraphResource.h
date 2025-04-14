@@ -1,5 +1,8 @@
 #pragma once
 
+#include "json.hpp"
+
+
 using Microsoft::WRL::ComPtr;
 namespace RenderGraph
 {
@@ -45,10 +48,18 @@ namespace RenderGraph
 
     };
 
-    struct RenderGraphEdgeResourceData
+    class RenderGraphEdgeResourceData
     {
+    public:
         std::shared_ptr <RenderGraphResource> resource;
         D3D12_RESOURCE_STATES requiredState;
+
+    public:
+        RenderGraphEdgeResourceData() = default;
+        ~RenderGraphEdgeResourceData() = default;
+
+        nlohmann::json Serialize() const;
+
     };
 
 }

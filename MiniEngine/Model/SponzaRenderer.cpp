@@ -80,10 +80,6 @@ namespace Sponza
 
 void Sponza::Startup( Camera& Camera, bool useRenderGraph)
 {
-    if (useRenderGraph) {
-        g_renderGraph = std::make_unique<RenderGraph::RenderGraph>();
-    }
-
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
     DXGI_FORMAT NormalFormat = g_SceneNormalBuffer.GetFormat();
     DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat();
