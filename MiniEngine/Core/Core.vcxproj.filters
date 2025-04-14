@@ -512,6 +512,7 @@
     <ClCompile Include="RenderGraph\RenderGraphResource.cpp" />
     <ClCompile Include="RenderGraph\RenderPass.cpp" />
     <ClCompile Include="RenderGraph\RenderGraph.cpp" />
+    <ClCompile Include="RenderGraph\Passes\LambdaRenderPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BitonicSort.h" />
@@ -591,6 +592,7 @@
     <ClInclude Include="RenderGraph\RenderGraph.h" />
     <ClInclude Include="RenderGraph\RenderPass.h" />
     <ClInclude Include="RenderGraph\RenderGraphResource.h" />
+    <ClInclude Include="RenderGraph\Passes\LambdaRenderPass.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl" />

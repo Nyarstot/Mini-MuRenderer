@@ -63,6 +63,7 @@ private:
     D3D12_VIEWPORT m_MainViewport;
     D3D12_RECT m_MainScissor;
 
+    bool m_useRenderGraph = true;
     ModelInstance m_ModelInst;
     ShadowCamera m_SunShadowCamera;
 };
@@ -167,7 +168,7 @@ void ModelViewer::Startup( void )
     if (CommandLineArgs::GetString(L"model", gltfFileName) == false)
     {
 #ifdef LEGACY_RENDERER
-        Sponza::Startup(m_Camera);
+        Sponza::Startup(m_Camera, m_useRenderGraph);
 #else
         m_ModelInst = Renderer::LoadModel(L"Sponza/PBR/sponza2.gltf", forceRebuild);
         m_ModelInst.Resize(100.0f * m_ModelInst.GetRadius());
@@ -259,11 +260,15 @@ void ModelViewer::RenderScene( void )
 
     ParticleEffectManager::Update(gfxContext.GetComputeContext(), Graphics::GetFrameTime());
 
-    if (m_ModelInst.IsNull())
+    if (m_ModelInst.IsNull() && !m_useRenderGraph)
     {
 #ifdef LEGACY_RENDERER
         Sponza::RenderScene(gfxContext, m_Camera, viewport, scissor);
 #endif
+    }
+    else if (m_ModelInst.IsNull() && m_useRenderGraph)
+    {
+        Sponza::RenderSceneRenderGraph(gfxContext, m_Camera, viewport, scissor);
     }
     else
     {

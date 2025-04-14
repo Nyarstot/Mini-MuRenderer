@@ -50,4 +50,5 @@ namespace RenderGraph
         std::shared_ptr <RenderGraphResource> resource;
         D3D12_RESOURCE_STATES requiredState;
     };
+
 }

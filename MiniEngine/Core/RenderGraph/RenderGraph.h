@@ -7,25 +7,23 @@
 
 namespace RenderGraph
 {
-
-
     class RenderGraph final : public BaseGraph<RenderPass, RenderGraphEdgeResourceData>
     {
     private:
         std::unordered_map<std::wstring, std::shared_ptr<RenderGraphResource>> m_resources;
-        std::vector<std::size_t> m_executionOrder;
-
-    private:
-        void TopologicalSort();
 
     public:
+        RenderGraph();
+
         std::shared_ptr<RenderGraphResource> CreateResource(const std::wstring& name, const RenderGraphResourceDesc& desc);
         std::shared_ptr<RenderGraphResource> GetResource(const std::wstring& name) const;
 
         void Compile();
-        void Execute(ID3D12GraphicsCommandList& commandList);
+        void Execute(ID3D12GraphicsCommandList* commandList);
+        void Clear();
 
         D3D12_RESOURCE_STATES GetCurrentState(const std::shared_ptr<RenderGraphResource>& resource) const;
 
     };
+
 }

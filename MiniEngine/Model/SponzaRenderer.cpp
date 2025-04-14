@@ -36,6 +36,11 @@
 #include "CompiledShaders/ModelViewerVS.h"
 #include "CompiledShaders/ModelViewerPS.h"
 
+// Render graph
+#include "../Core/RenderGraph/RenderPass.h"
+#include "../Core/RenderGraph/RenderGraphResource.h"
+#include "../Core/RenderGraph/Passes/LambdaRenderPass.h"
+
 using namespace Math;
 using namespace Graphics;
 
@@ -56,6 +61,11 @@ namespace Sponza
     ModelH3D m_Model;
     std::vector<bool> m_pMaterialIsCutout;
 
+    // Can't use smart pointer for some reason. Object just keeps be nullptr
+    // after initialization. May be i don't know something. By the way, it is
+    // working with raw pointer and i'm ok with this.
+    RenderGraph::RenderGraph* g_renderGraph;
+
     Vector3 m_SunDirection;
     ShadowCamera m_SunShadow;
 
@@ -68,8 +78,12 @@ namespace Sponza
     NumVar ShadowDimZ("Sponza/Lighting/Shadow Dim Z", 3000, 1000, 10000, 100 );
 }
 
-void Sponza::Startup( Camera& Camera )
+void Sponza::Startup( Camera& Camera, bool useRenderGraph)
 {
+    //if (useRenderGraph) {
+    //    g_renderGraph = std::make_unique<RenderGraph::RenderGraph>();
+    //}
+
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
     DXGI_FORMAT NormalFormat = g_SceneNormalBuffer.GetFormat();
     DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat();
@@ -397,4 +411,266 @@ void Sponza::RenderScene(
             }
         }
     }
+}
+
+void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Camera& camera, const D3D12_VIEWPORT& viewport, const D3D12_RECT& scissor, bool skipDiffusePass, bool skipShadowMap)
+{
+    Renderer::UpdateGlobalDescriptors();
+    std::uint32_t frameIndex = TemporalEffects::GetFrameIndexMod2();
+
+    // Calculate sun direction
+    float costheta = cosf(m_SunOrientation);
+    float sintheta = sinf(m_SunOrientation);
+    float cosphi = cosf(m_SunInclination * 3.14159f * 0.5f);
+    float sinphi = sinf(m_SunInclination * 3.14159f * 0.5f);
+    m_SunDirection = Normalize(Vector3(costheta * cosphi, sinphi, sintheta * cosphi));
+
+    if (g_renderGraph == nullptr) {
+        g_renderGraph = new RenderGraph::RenderGraph();
+    }
+    else
+    {
+        g_renderGraph->Clear();
+    }
+
+    // Define render passes using lambdas that capture the needed context
+    auto shadowPass = [&](ID3D12GraphicsCommandList* cmdList) {
+        ScopedTimer _prof(L"Render Shadow Map", gfxContext);
+
+        m_SunShadow.UpdateMatrix(
+            -m_SunDirection,
+            Vector3(0.0f, -500.0f, 0.0f),
+            Vector3(ShadowDimX, ShadowDimY, ShadowDimZ),
+            static_cast<std::uint32_t>(g_ShadowBuffer.GetWidth()),
+            static_cast<std::uint32_t>(g_ShadowBuffer.GetHeight()),
+            16);
+
+        g_ShadowBuffer.BeginRendering(gfxContext);
+
+        // ----- Shadow PSO
+
+        gfxContext.SetPipelineState(m_ShadowPSO);
+        RenderObjects(
+            gfxContext,
+            m_SunShadow.GetViewProjMatrix(),
+            camera.GetPosition(),
+            kOpaque);
+
+        // ----- Cutout Shadow PSO
+
+        gfxContext.SetPipelineState(m_CutoutShadowPSO);
+        RenderObjects(
+            gfxContext,
+            m_SunShadow.GetViewProjMatrix(),
+            camera.GetPosition(),
+            kCutout
+        );
+
+        g_ShadowBuffer.EndRendering(gfxContext);
+
+    };
+
+    auto depthPrePass = [&](ID3D12GraphicsCommandList* cmdList) {
+        ScopedTimer _prof(L"Z PrePass", gfxContext);
+
+        gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+        gfxContext.ClearDepth(g_SceneDepthBuffer);
+        gfxContext.SetPipelineState(m_DepthPSO);
+        gfxContext.SetDepthStencilTarget(g_SceneDepthBuffer.GetDSV());
+        gfxContext.SetViewportAndScissor(viewport, scissor);
+        RenderObjects(gfxContext, camera.GetViewProjMatrix(), camera.GetPosition(), kOpaque);
+
+        gfxContext.SetPipelineState(m_CutoutDepthPSO);
+        RenderObjects(gfxContext, camera.GetViewProjMatrix(), camera.GetPosition(), kCutout);
+    };
+
+    auto mainRenderPass = [&](ID3D12GraphicsCommandList* cmdList) {
+        ScopedTimer _prof(L"Main Render", gfxContext);
+
+        gfxContext.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+        gfxContext.TransitionResource(g_SceneNormalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+        gfxContext.ClearColor(g_SceneColorBuffer);
+
+        gfxContext.TransitionResource(g_SSAOFullScreen, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+        gfxContext.SetDescriptorTable(Renderer::kCommonSRVs, Renderer::m_CommonTextures);
+
+        // Set up PS constants
+        struct {
+            Vector3 sunDirection;
+            Vector3 sunLight;
+            Vector3 ambientLight;
+            float ShadowTexelSize[4];
+            float InvTileDim[4];
+            uint32_t TileCount[4];
+            uint32_t FirstLightIndex[4];
+            uint32_t FrameIndexMod2;
+        } psConstants;
+
+        psConstants.sunDirection        = m_SunDirection;
+        psConstants.sunLight            = Vector3(1.0f, 1.0f, 1.0f) * m_SunLightIntensity;
+        psConstants.ambientLight        = Vector3(1.0f, 1.0f, 1.0f) * m_AmbientIntensity;
+        psConstants.ShadowTexelSize[0]  = 1.0f / g_ShadowBuffer.GetWidth();
+        psConstants.InvTileDim[0]       = 1.0f / Lighting::LightGridDim;
+        psConstants.InvTileDim[1]       = 1.0f / Lighting::LightGridDim;
+        psConstants.TileCount[0]        = Math::DivideByMultiple(g_SceneColorBuffer.GetWidth(), Lighting::LightGridDim);
+        psConstants.TileCount[1]        = Math::DivideByMultiple(g_SceneColorBuffer.GetHeight(), Lighting::LightGridDim);
+        psConstants.FirstLightIndex[0]  = Lighting::m_FirstConeLight;
+        psConstants.FirstLightIndex[1]  = Lighting::m_FirstConeShadowedLight;
+        psConstants.FrameIndexMod2      = frameIndex;
+
+        gfxContext.SetDynamicConstantBufferView(Renderer::kMaterialConstants, sizeof(psConstants), &psConstants);
+
+        gfxContext.SetPipelineState(m_ModelPSO);
+        gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_READ);
+        D3D12_CPU_DESCRIPTOR_HANDLE rtvs[]{ g_SceneColorBuffer.GetRTV(), g_SceneNormalBuffer.GetRTV() };
+        gfxContext.SetRenderTargets(ARRAYSIZE(rtvs), rtvs, g_SceneDepthBuffer.GetDSV_DepthReadOnly());
+        gfxContext.SetViewportAndScissor(viewport, scissor);
+
+        RenderObjects(gfxContext, camera.GetViewProjMatrix(), camera.GetPosition(), Sponza::kOpaque);
+        gfxContext.SetPipelineState(m_CutoutModelPSO);
+        RenderObjects(gfxContext, camera.GetViewProjMatrix(), camera.GetPosition(), Sponza::kCutout);
+    };
+
+    /////////////////////////////////////////
+    // Create resources in the render graph
+    /////////////////////////////////////////
+
+    auto backBuffer = g_renderGraph->CreateResource(L"BackBuffer", {
+        RenderGraph::RenderGraphResourceType::RTV,
+        g_SceneColorBuffer.GetFormat(),
+        g_SceneColorBuffer.GetWidth(),
+        g_SceneColorBuffer.GetHeight()
+    });
+    backBuffer->SetResource(g_SceneColorBuffer.GetResource());
+
+    auto depthBuffer = g_renderGraph->CreateResource(L"DepthBuffer", {
+        RenderGraph::RenderGraphResourceType::DSV,
+        g_SceneDepthBuffer.GetFormat(),
+        g_SceneDepthBuffer.GetWidth(),
+        g_SceneDepthBuffer.GetHeight()
+    });
+    depthBuffer->SetResource(g_SceneDepthBuffer.GetResource());
+
+    auto normalBuffer = g_renderGraph->CreateResource(L"NormalBuffer", {
+        RenderGraph::RenderGraphResourceType::RTV,
+        g_SceneNormalBuffer.GetFormat(),
+        g_SceneNormalBuffer.GetWidth(),
+        g_SceneNormalBuffer.GetHeight()
+    });
+    normalBuffer->SetResource(g_SceneNormalBuffer.GetResource());
+
+    auto shadowBuffer = g_renderGraph->CreateResource(L"ShadowBuffer", {
+        RenderGraph::RenderGraphResourceType::DSV,
+        g_ShadowBuffer.GetFormat(),
+        g_ShadowBuffer.GetWidth(),
+        g_ShadowBuffer.GetHeight()
+    });
+    shadowBuffer->SetResource(g_ShadowBuffer.GetResource());
+
+    // -------- Create render passes
+
+    auto shadowPassNode     = std::make_unique<RenderGraph::LambdaRenderPass>(L"ShadowPass", shadowPass);
+    auto depthPrePassNode   = std::make_unique<RenderGraph::LambdaRenderPass>(L"DepthPrePass", depthPrePass);
+    auto mainRenderPassNode = std::make_unique<RenderGraph::LambdaRenderPass>(L"MainRenderPass", mainRenderPass);
+
+    // -------- Add render passes to graph
+
+    std::size_t shadowPassId = g_renderGraph->AddNode(std::move(shadowPassNode));
+    std::size_t depthPrePassId = g_renderGraph->AddNode(std::move(depthPrePassNode));
+    std::size_t mainRenderPassId = g_renderGraph->AddNode(std::move(mainRenderPassNode));
+
+    // -------- Add edge dependencies
+
+    if (!skipShadowMap) {
+        g_renderGraph->AddEdge(
+            shadowPassId,
+            depthPrePassId,
+            std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+                RenderGraph::RenderGraphEdgeResourceData{
+                    shadowBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+                })
+        );
+    }
+
+    g_renderGraph->AddEdge(
+        depthPrePassId,
+        mainRenderPassId,
+        std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+            RenderGraph::RenderGraphEdgeResourceData{
+                depthBuffer,
+                D3D12_RESOURCE_STATE_DEPTH_READ
+            })
+    );
+
+    if (!SSAO::DebugDraw) {
+        auto ssaoPass = [&](ID3D12GraphicsCommandList* cmdList) {
+            SSAO::Render(gfxContext, camera);
+            };
+
+        auto ssaoPassNode = std::make_unique<RenderGraph::LambdaRenderPass>(L"SSAOPass", ssaoPass);
+        std::size_t ssaoPassId = g_renderGraph->AddNode(std::move(ssaoPassNode));
+
+        g_renderGraph->AddEdge(
+            depthPrePassId,
+            mainRenderPassId,
+            std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+                RenderGraph::RenderGraphEdgeResourceData{
+                    depthBuffer,
+                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+                })
+        );
+
+        g_renderGraph->AddEdge(
+            ssaoPassId,
+            mainRenderPassId,
+            std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+                RenderGraph::RenderGraphEdgeResourceData{
+                    nullptr,
+                    D3D12_RESOURCE_STATE_COMMON
+                })
+        );
+    }
+
+    if (!skipDiffusePass) {
+        auto lightGridPass = [&](ID3D12GraphicsCommandList* cmdList) {
+            Lighting::FillLightGrid(gfxContext, camera);
+            };
+
+        auto lightGridPassNode = std::make_unique<RenderGraph::LambdaRenderPass>(L"LightGridPass", lightGridPass);
+        std::size_t lightGridPassId = g_renderGraph->AddNode(std::move(lightGridPassNode));
+
+        g_renderGraph->AddEdge(
+            depthPrePassId,
+            lightGridPassId,
+            std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+                RenderGraph::RenderGraphEdgeResourceData{
+                    depthBuffer,
+                    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+                })
+        );
+
+        g_renderGraph->AddEdge(
+            lightGridPassId,
+            mainRenderPassId,
+            std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+                RenderGraph::RenderGraphEdgeResourceData{
+                    nullptr,
+                    D3D12_RESOURCE_STATE_COMMON
+                })
+        );
+    }
+
+    //g_renderGraph->Compile();
+    //gfxContext.SetRootSignature(Renderer::m_RootSig);
+    //gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Renderer::s_TextureHeap.GetHeapPointer());
+    //gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    //gfxContext.SetIndexBuffer(m_Model.GetIndexBuffer());
+    //gfxContext.SetVertexBuffer(0, m_Model.GetVertexBuffer());
+    //g_renderGraph->Execute(gfxContext.GetCommandList());
+
+}
+
+void Sponza::RenderGraphStartup()
+{
+
 }

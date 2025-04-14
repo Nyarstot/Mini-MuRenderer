@@ -4,10 +4,16 @@
 
 namespace RenderGraph
 {
+    RenderGraph::RenderGraph()
+        : BaseGraph<RenderPass, RenderGraphEdgeResourceData>()
+    {
+    }
+
     std::shared_ptr<RenderGraphResource> RenderGraph::CreateResource(const std::wstring& name, const RenderGraphResourceDesc& desc)
     {
         auto resource = std::make_shared<RenderGraphResource>(name, desc);
-        m_resources[name] = resource;
+        //m_resources[name] = resource;
+        m_resources.insert({ name, resource });
         return resource;
     }
 
@@ -69,12 +75,18 @@ namespace RenderGraph
         }
     }
 
-    void RenderGraph::Execute(ID3D12GraphicsCommandList& commandList)
+    void RenderGraph::Execute(ID3D12GraphicsCommandList* commandList)
     {
         for (std::size_t nodeId : m_executionOrder) {
             auto& node = GetNode(nodeId);
             node.data->Execute(commandList);
         }
+    }
+
+    void RenderGraph::Clear()
+    {
+        BaseGraph<RenderPass, RenderGraphEdgeResourceData>::Clear();
+        m_resources.clear();
     }
 
     D3D12_RESOURCE_STATES RenderGraph::GetCurrentState(const std::shared_ptr<RenderGraphResource>& resource) const
