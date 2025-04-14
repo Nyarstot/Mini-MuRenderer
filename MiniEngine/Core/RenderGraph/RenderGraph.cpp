@@ -36,11 +36,7 @@ namespace RenderGraph
 
         // Calculate in-degree for each node
         for (std::size_t i = 0; i < GetNodeCount(); ++i) {
-            const auto& node = GetNode(i);
-            for (std::size_t edgeId : node.inputEdges) {
-                const auto& edge = GetEdge(edgeId);
-                inDegree[edge.fromNode]++;
-            }
+            inDegree[i] = GetNode(i).inputEdges.size();
         }
 
         // Find initial ready nodes (in-degree = 0)

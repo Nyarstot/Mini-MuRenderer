@@ -80,9 +80,9 @@ namespace Sponza
 
 void Sponza::Startup( Camera& Camera, bool useRenderGraph)
 {
-    //if (useRenderGraph) {
-    //    g_renderGraph = std::make_unique<RenderGraph::RenderGraph>();
-    //}
+    if (useRenderGraph) {
+        g_renderGraph = std::make_unique<RenderGraph::RenderGraph>();
+    }
 
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
     DXGI_FORMAT NormalFormat = g_SceneNormalBuffer.GetFormat();
@@ -660,13 +660,13 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
         );
     }
 
-    //g_renderGraph->Compile();
-    //gfxContext.SetRootSignature(Renderer::m_RootSig);
-    //gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Renderer::s_TextureHeap.GetHeapPointer());
-    //gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    //gfxContext.SetIndexBuffer(m_Model.GetIndexBuffer());
-    //gfxContext.SetVertexBuffer(0, m_Model.GetVertexBuffer());
-    //g_renderGraph->Execute(gfxContext.GetCommandList());
+    g_renderGraph->Compile();
+    gfxContext.SetRootSignature(Renderer::m_RootSig);
+    gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Renderer::s_TextureHeap.GetHeapPointer());
+    gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    gfxContext.SetIndexBuffer(m_Model.GetIndexBuffer());
+    gfxContext.SetVertexBuffer(0, m_Model.GetVertexBuffer());
+    g_renderGraph->Execute(gfxContext.GetCommandList());
 
 }
 
