@@ -34,7 +34,10 @@
 #include "ShadowCamera.h"
 #include "Display.h"
 
+#include "ImGuiRenderer.h"
+
 #define LEGACY_RENDERER
+#define IMGUI_UI_ENABLE
 
 using namespace GameCore;
 using namespace Math;
@@ -155,6 +158,10 @@ void ModelViewer::Startup( void )
     SSAO::Enable = true;
 
     Renderer::Initialize();
+
+    #ifdef IMGUI_UI_ENABLE
+    //ImGuiRenderer::Initialize();
+    #endif // IMGUI_UI_ENABLE
 
     LoadIBLTextures();
 

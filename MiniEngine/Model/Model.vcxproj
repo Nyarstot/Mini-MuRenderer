@@ -59,12 +59,14 @@
     </Manifest>
     <ClCompile>
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdcpp14</LanguageStandard>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">A:\repo\Mini-MuRenderer\Packages\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Animation.h" />
     <ClInclude Include="ConstantBuffers.h" />
     <ClInclude Include="glTF.h" />
+    <ClInclude Include="ImGuiRenderer.h" />
     <ClInclude Include="IndexOptimizePostTransform.h" />
     <ClInclude Include="LightManager.h" />
     <ClInclude Include="MeshConvert.h" />
@@ -80,6 +82,7 @@
     <ClCompile Include="Animation.cpp" />
     <ClCompile Include="BuildH3D.cpp" />
     <ClCompile Include="glTF.cpp" />
+    <ClCompile Include="ImGuiRenderer.cpp" />
     <ClCompile Include="IndexOptimizePostTransform.cpp" />
     <ClCompile Include="LightManager.cpp" />
     <ClCompile Include="MeshConvert.cpp" />
