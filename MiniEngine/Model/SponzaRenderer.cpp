@@ -18,12 +18,17 @@
 #include "Camera.h"
 #include "CommandContext.h"
 #include "TemporalEffects.h"
+#include "MotionBlur.h"
+#include "DepthOfField.h"
+#include "PostEffects.h"
 #include "SSAO.h"
 #include "SystemTime.h"
 #include "ShadowCamera.h"
 #include "ParticleEffects.h"
+#include "ParticleEffectManager.h"
 #include "SponzaRenderer.h"
 #include "Renderer.h"
+#include "Display.h"
 
 // From Model
 #include "ModelH3D.h"
@@ -65,9 +70,14 @@ namespace Sponza
     // after initialization. May be i don't know something. By the way, it is
     // working with raw pointer and i'm ok with this.
     RenderGraph::RenderGraph* g_renderGraph;
+    RenderGraph::RenderGraphStoraged* g_renderGraphStoraged;
 
     Vector3 m_SunDirection;
     ShadowCamera m_SunShadow;
+    Math::Camera m_Camera;
+    D3D12_VIEWPORT m_Viewport;
+    D3D12_RECT m_Scissor;
+    std::uint32_t m_FrameIndex;
 
     ExpVar m_AmbientIntensity("Sponza/Lighting/Ambient Intensity", 0.1f, -16.0f, 16.0f, 0.1f);
     ExpVar m_SunLightIntensity("Sponza/Lighting/Sun Light Intensity", 4.0f, 0.0f, 16.0f, 0.1f);
@@ -159,6 +169,8 @@ void Sponza::Startup( Camera& Camera, bool useRenderGraph)
     }
 
     ParticleEffects::InitFromJSON(L"Sponza/particles.json");
+
+    Sponza::RenderGraphStartup();
 
     float modelRadius = Length(m_Model.GetBoundingBox().GetDimensions()) * 0.5f;
     const Vector3 eye = m_Model.GetBoundingBox().GetCenter() + Vector3(modelRadius * 0.5f, 0.0f, 0.0f);
@@ -662,11 +674,436 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
     gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     gfxContext.SetIndexBuffer(m_Model.GetIndexBuffer());
     gfxContext.SetVertexBuffer(0, m_Model.GetVertexBuffer());
-    g_renderGraph->Execute(gfxContext.GetCommandList());
+    g_renderGraph->Execute(gfxContext);
+}
 
+void Sponza::RenderSceneRenderGraphStoraged(GraphicsContext& gfxContext, const Math::Camera& camera, const D3D12_VIEWPORT& viewport, const D3D12_RECT& scissor, bool skipDiffusePass, bool skipShadowMap)
+{
+    m_Camera = camera;
+    m_Viewport = viewport;
+    m_Scissor = scissor;
+    Renderer::UpdateGlobalDescriptors();
+    m_FrameIndex = TemporalEffects::GetFrameIndexMod2();
+
+    // Calculate sun direction
+    float costheta = cosf(m_SunOrientation);
+    float sintheta = sinf(m_SunOrientation);
+    float cosphi = cosf(m_SunInclination * 3.14159f * 0.5f);
+    float sinphi = sinf(m_SunInclination * 3.14159f * 0.5f);
+    m_SunDirection = Normalize(Vector3(costheta * cosphi, sinphi, sintheta * cosphi));
+
+    g_renderGraphStoraged->Clear();
+
+    std::size_t particleUpdatePassId = g_renderGraphStoraged->AddNode(L"ParticleUpdatePass");
+    std::size_t lightShadowPassId = g_renderGraphStoraged->AddNode(L"LightShadowPass");
+    std::size_t shadowPassId = g_renderGraphStoraged->AddNode(L"ShadowPass");
+    std::size_t depthPrePassId = g_renderGraphStoraged->AddNode(L"DepthPrePass");
+    std::size_t mainRenderPassId = g_renderGraphStoraged->AddNode(L"MainRenderPass");
+    std::size_t velocityPassId = g_renderGraphStoraged->AddNode(L"VelocityGatherPass");
+    std::size_t taaResolvePassId = g_renderGraphStoraged->AddNode(L"TAAResolvePass");
+    std::size_t particleRenderPassId = g_renderGraphStoraged->AddNode(L"ParticleRenderPass");
+
+    // -------- Add edge dependencies
+
+    // TODO: some of the nodes just use dummy resources for order control
+    // figure out actual dependencies later. Especially for particles
+
+    g_renderGraphStoraged->AddEdge(
+        particleUpdatePassId,
+        particleRenderPassId,
+        L"Dummy"
+    );
+
+    g_renderGraphStoraged->AddEdge(
+        lightShadowPassId,
+        depthPrePassId,
+        L"Dummy"
+    );
+
+    if (!skipShadowMap) {
+        g_renderGraphStoraged->AddEdge(
+            lightShadowPassId,
+            shadowPassId,
+            L"Dummy"
+        );
+
+        g_renderGraphStoraged->AddEdge(
+            shadowPassId,
+            mainRenderPassId,
+            L"Dummy"
+        );
+
+        g_renderGraphStoraged->AddEdge(
+            depthPrePassId,
+            shadowPassId,
+            L"ShadowPixel"
+        );
+    }
+
+    g_renderGraphStoraged->AddEdge(
+        depthPrePassId,
+        mainRenderPassId,
+        L"DepthRead"
+    );
+
+    if (!SSAO::DebugDraw) {
+        std::size_t ssaoPassId = g_renderGraphStoraged->AddNode(L"SSAOPass");
+
+        g_renderGraphStoraged->AddEdge(
+            depthPrePassId,
+            ssaoPassId,
+            L"DepthNonPixel"
+        );
+
+        g_renderGraphStoraged->AddEdge(
+            ssaoPassId,
+            mainRenderPassId,
+            L"Dummy"
+        );
+    }
+
+    if (!skipDiffusePass) {
+        std::size_t lightGridPassId = g_renderGraphStoraged->AddNode(L"LightGridPass");
+
+        g_renderGraphStoraged->AddEdge(
+            depthPrePassId,
+            lightGridPassId,
+            L"DepthNonPixel"
+        );
+
+        g_renderGraphStoraged->AddEdge(
+            lightGridPassId,
+            mainRenderPassId,
+            L"Dummy"
+        );
+    }
+
+    g_renderGraphStoraged->AddEdge(
+        mainRenderPassId,
+        velocityPassId,
+        L"ColorNonPixel"
+    );
+
+    g_renderGraphStoraged->AddEdge(
+        velocityPassId,
+        taaResolvePassId,
+        L"VelocityNonPixel"
+    );
+
+    g_renderGraphStoraged->AddEdge(
+        taaResolvePassId,
+        particleRenderPassId,
+        L"ColorRenderTarget"
+    );
+
+    // DoF and motion blur implementations are currently incompatible
+    // DoF has priority when enabled
+    if (DepthOfField::Enable) {
+        std::size_t depthOfFieldPassId = g_renderGraphStoraged->AddNode(L"DepthOfFieldPass");
+        g_renderGraphStoraged->AddEdge(
+            particleRenderPassId,
+            depthOfFieldPassId,
+            L"ColorNonPixel"
+        );
+    } else { // Enable Motion Blur instead
+        std::size_t motionBlurPassId = g_renderGraphStoraged->AddNode(L"MotionBlurPass");
+        g_renderGraphStoraged->AddEdge(
+            particleRenderPassId,
+            motionBlurPassId,
+            L"ColorNonPixel"
+        );
+        g_renderGraphStoraged->AddEdge(
+            velocityPassId,
+            motionBlurPassId,
+            L"VelocityNonPixel"
+        );
+    }
+
+    g_renderGraphStoraged->Compile();
+    g_renderGraphStoraged->Execute(gfxContext);
 }
 
 void Sponza::RenderGraphStartup()
 {
+    g_renderGraph = new RenderGraph::RenderGraph();
+    g_renderGraphStoraged = new RenderGraph::RenderGraphStoraged();
+    // Create resources once
+    // TODO: find a way to represent particle resources
+    auto backBuffer = g_renderGraphStoraged->CreateResource(L"BackBuffer", {
+        RenderGraph::RenderGraphResourceType::RTV,
+        g_SceneColorBuffer.GetFormat(),
+        g_SceneColorBuffer.GetWidth(),
+        g_SceneColorBuffer.GetHeight()
+    });
+    backBuffer->SetResource(g_SceneColorBuffer.GetResource());
 
+    auto depthBuffer = g_renderGraphStoraged->CreateResource(L"DepthBuffer", {
+        RenderGraph::RenderGraphResourceType::DSV,
+        g_SceneDepthBuffer.GetFormat(),
+        g_SceneDepthBuffer.GetWidth(),
+        g_SceneDepthBuffer.GetHeight()
+    });
+    depthBuffer->SetResource(g_SceneDepthBuffer.GetResource());
+
+    auto normalBuffer = g_renderGraphStoraged->CreateResource(L"NormalBuffer", {
+        RenderGraph::RenderGraphResourceType::RTV,
+        g_SceneNormalBuffer.GetFormat(),
+        g_SceneNormalBuffer.GetWidth(),
+        g_SceneNormalBuffer.GetHeight()
+    });
+    normalBuffer->SetResource(g_SceneNormalBuffer.GetResource());
+
+    auto shadowBuffer = g_renderGraphStoraged->CreateResource(L"ShadowBuffer", {
+        RenderGraph::RenderGraphResourceType::DSV,
+        g_ShadowBuffer.GetFormat(),
+        g_ShadowBuffer.GetWidth(),
+        g_ShadowBuffer.GetHeight()
+    });
+    shadowBuffer->SetResource(g_ShadowBuffer.GetResource());
+
+    auto velocityBuffer = g_renderGraphStoraged->CreateResource(L"VelocityBuffer", {
+        RenderGraph::RenderGraphResourceType::RTV,
+        g_VelocityBuffer.GetFormat(),
+        g_VelocityBuffer.GetWidth(),
+        g_VelocityBuffer.GetHeight()
+    });
+    velocityBuffer->SetResource(g_VelocityBuffer.GetResource());
+    // Create storaged nodes to use/reuse later on
+    auto shadowPassNode         = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"ShadowPass", &Sponza::ShadowPass);
+    auto depthPrePassNode       = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"DepthPrePass", &Sponza::DepthPrePass);
+    auto mainRenderPassNode     = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"MainRenderPass", &Sponza::MainRenderPass);
+    auto ssaoPassNode           = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"SSAOPass", &Sponza::SSAOPass);
+    auto lightGridPassNode      = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"LightGridPass", &Sponza::LightGridPass);
+    auto lightShadowPassNode    = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"LightShadowPass", &Sponza::LightShadowPass);
+    auto taaResolvePassNode     = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"TAAResolvePass", &Sponza::ResolveTAA);
+    auto velocityPassNode       = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"VelocityGatherPass", &Sponza::GenerateCameraVelocityBuffer);
+    auto motionBlurPassNode     = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"MotionBlurPass", &Sponza::RenderBlur);
+    auto depthOfFieldPassNode   = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"DepthOfFieldPass", &Sponza::RenderDOF);
+    auto particleRenderPassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"ParticleRenderPass", &Sponza::RenderParticles);
+    auto particleUpdatePassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"ParticleUpdatePass", &Sponza::RecalculateParticles);
+    g_renderGraphStoraged->StoreNode(std::move(particleUpdatePassNode), L"ParticleUpdatePass");
+    g_renderGraphStoraged->StoreNode(std::move(particleRenderPassNode), L"ParticleRenderPass");
+    g_renderGraphStoraged->StoreNode(std::move(depthOfFieldPassNode), L"DepthOfFieldPass");
+    g_renderGraphStoraged->StoreNode(std::move(motionBlurPassNode), L"MotionBlurPass");
+    g_renderGraphStoraged->StoreNode(std::move(velocityPassNode), L"VelocityGatherPass");
+    g_renderGraphStoraged->StoreNode(std::move(taaResolvePassNode), L"TAAResolvePass");
+    g_renderGraphStoraged->StoreNode(std::move(lightShadowPassNode), L"LightShadowPass");
+    g_renderGraphStoraged->StoreNode(std::move(lightGridPassNode), L"LightGridPass");
+    g_renderGraphStoraged->StoreNode(std::move(ssaoPassNode), L"SSAOPass");
+    g_renderGraphStoraged->StoreNode(std::move(shadowPassNode), L"ShadowPass");
+    g_renderGraphStoraged->StoreNode(std::move(depthPrePassNode), L"DepthPrePass");
+    g_renderGraphStoraged->StoreNode(std::move(mainRenderPassNode), L"MainRenderPass");
+    // Create edge transition data
+    auto shadowPixelData = std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+        RenderGraph::RenderGraphEdgeResourceData{
+            shadowBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+        });
+    auto velocityNonPixelData = std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+        RenderGraph::RenderGraphEdgeResourceData{
+            velocityBuffer,
+            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+        });
+    auto velocityUnorderedData = std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+        RenderGraph::RenderGraphEdgeResourceData{
+            velocityBuffer,
+            D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        });
+    auto velocityPixelData = std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+        RenderGraph::RenderGraphEdgeResourceData{
+            velocityBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+        });
+    auto depthNonPixelData = std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+        RenderGraph::RenderGraphEdgeResourceData{
+            depthBuffer,
+            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+        });
+    auto colorNonPixelData = std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+        RenderGraph::RenderGraphEdgeResourceData{
+            backBuffer,
+            D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+        });
+    auto colorUnorderedData = std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+        RenderGraph::RenderGraphEdgeResourceData{
+            backBuffer,
+            D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        });
+    auto colorRenderTargetData = std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+        RenderGraph::RenderGraphEdgeResourceData{
+            backBuffer,
+            D3D12_RESOURCE_STATE_RENDER_TARGET
+        });
+    auto depthReadData = std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+        RenderGraph::RenderGraphEdgeResourceData{
+            depthBuffer,
+            D3D12_RESOURCE_STATE_DEPTH_READ
+        });
+    auto dummyData = std::make_unique<RenderGraph::RenderGraphEdgeResourceData>(
+        RenderGraph::RenderGraphEdgeResourceData{
+            nullptr,
+            D3D12_RESOURCE_STATE_COMMON
+        });
+    g_renderGraphStoraged->StoreEdge(std::move(shadowPixelData), L"ShadowPixel");
+    g_renderGraphStoraged->StoreEdge(std::move(depthNonPixelData), L"DepthNonPixel");
+    g_renderGraphStoraged->StoreEdge(std::move(velocityNonPixelData), L"VelocityNonPixel");
+    g_renderGraphStoraged->StoreEdge(std::move(velocityUnorderedData), L"VelocityUnordered");
+    g_renderGraphStoraged->StoreEdge(std::move(velocityPixelData), L"VelocityPixel");
+    g_renderGraphStoraged->StoreEdge(std::move(colorNonPixelData), L"ColorNonPixel");
+    g_renderGraphStoraged->StoreEdge(std::move(colorUnorderedData), L"ColorUnordered");
+    g_renderGraphStoraged->StoreEdge(std::move(colorNonPixelData), L"ColorRenderTarget");
+    g_renderGraphStoraged->StoreEdge(std::move(depthReadData), L"DepthRead");
+    g_renderGraphStoraged->StoreEdge(std::move(dummyData), L"Dummy");
+}
+
+void Sponza::ShadowPass(CommandContext& ctx)
+{
+    GraphicsContext& gfxContext = ctx.GetGraphicsContext();
+    ScopedTimer _prof(L"Render Shadow Map", gfxContext);
+    SetupGraphicsState(gfxContext);
+
+    m_SunShadow.UpdateMatrix(
+        -m_SunDirection,
+        Vector3(0.0f, -500.0f, 0.0f),
+        Vector3(ShadowDimX, ShadowDimY, ShadowDimZ),
+        static_cast<std::uint32_t>(g_ShadowBuffer.GetWidth()),
+        static_cast<std::uint32_t>(g_ShadowBuffer.GetHeight()),
+        16);
+
+    g_ShadowBuffer.BeginRendering(gfxContext);
+
+    // ----- Shadow PSO
+
+    gfxContext.SetPipelineState(m_ShadowPSO);
+    RenderObjects(
+        gfxContext,
+        m_SunShadow.GetViewProjMatrix(),
+        m_Camera.GetPosition(),
+        kOpaque);
+
+    // ----- Cutout Shadow PSO
+
+    gfxContext.SetPipelineState(m_CutoutShadowPSO);
+    RenderObjects(
+        gfxContext,
+        m_SunShadow.GetViewProjMatrix(),
+        m_Camera.GetPosition(),
+        kCutout
+    );
+
+    g_ShadowBuffer.EndRendering(gfxContext);
+}
+
+void Sponza::DepthPrePass(CommandContext& ctx)
+{
+    GraphicsContext& gfxContext = ctx.GetGraphicsContext();
+    ScopedTimer _prof(L"Z PrePass", gfxContext);
+
+    gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
+    gfxContext.ClearDepth(g_SceneDepthBuffer);
+    gfxContext.SetPipelineState(m_DepthPSO);
+    gfxContext.SetDepthStencilTarget(g_SceneDepthBuffer.GetDSV());
+    gfxContext.SetViewportAndScissor(m_Viewport, m_Scissor);
+    RenderObjects(gfxContext, m_Camera.GetViewProjMatrix(), m_Camera.GetPosition(), kOpaque);
+
+    gfxContext.SetPipelineState(m_CutoutDepthPSO);
+    RenderObjects(gfxContext, m_Camera.GetViewProjMatrix(), m_Camera.GetPosition(), kCutout);
+}
+
+void Sponza::MainRenderPass(CommandContext& ctx)
+{
+    GraphicsContext& gfxContext = ctx.GetGraphicsContext();
+    ScopedTimer _prof(L"Main Render", gfxContext);
+
+    gfxContext.TransitionResource(g_SceneColorBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+    gfxContext.TransitionResource(g_SceneNormalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+    gfxContext.ClearColor(g_SceneColorBuffer);
+
+    gfxContext.TransitionResource(g_SSAOFullScreen, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+    gfxContext.SetDescriptorTable(Renderer::kCommonSRVs, Renderer::m_CommonTextures);
+
+    // Set up PS constants
+    struct {
+        Vector3 sunDirection;
+        Vector3 sunLight;
+        Vector3 ambientLight;
+        float ShadowTexelSize[4];
+        float InvTileDim[4];
+        uint32_t TileCount[4];
+        uint32_t FirstLightIndex[4];
+        uint32_t FrameIndexMod2;
+    } psConstants;
+
+    psConstants.sunDirection        = m_SunDirection;
+    psConstants.sunLight            = Vector3(1.0f, 1.0f, 1.0f) * m_SunLightIntensity;
+    psConstants.ambientLight        = Vector3(1.0f, 1.0f, 1.0f) * m_AmbientIntensity;
+    psConstants.ShadowTexelSize[0]  = 1.0f / g_ShadowBuffer.GetWidth();
+    psConstants.InvTileDim[0]       = 1.0f / Lighting::LightGridDim;
+    psConstants.InvTileDim[1]       = 1.0f / Lighting::LightGridDim;
+    psConstants.TileCount[0]        = Math::DivideByMultiple(g_SceneColorBuffer.GetWidth(), Lighting::LightGridDim);
+    psConstants.TileCount[1]        = Math::DivideByMultiple(g_SceneColorBuffer.GetHeight(), Lighting::LightGridDim);
+    psConstants.FirstLightIndex[0]  = Lighting::m_FirstConeLight;
+    psConstants.FirstLightIndex[1]  = Lighting::m_FirstConeShadowedLight;
+    psConstants.FrameIndexMod2      = m_FrameIndex;
+
+    gfxContext.SetDynamicConstantBufferView(Renderer::kMaterialConstants, sizeof(psConstants), &psConstants);
+
+    gfxContext.SetPipelineState(m_ModelPSO);
+    gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_READ);
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvs[]{ g_SceneColorBuffer.GetRTV(), g_SceneNormalBuffer.GetRTV() };
+    gfxContext.SetRenderTargets(ARRAYSIZE(rtvs), rtvs, g_SceneDepthBuffer.GetDSV_DepthReadOnly());
+    gfxContext.SetViewportAndScissor(m_Viewport, m_Scissor);
+
+    RenderObjects(gfxContext, m_Camera.GetViewProjMatrix(), m_Camera.GetPosition(), Sponza::kOpaque);
+    gfxContext.SetPipelineState(m_CutoutModelPSO);
+    RenderObjects(gfxContext, m_Camera.GetViewProjMatrix(), m_Camera.GetPosition(), Sponza::kCutout);
+}
+
+void Sponza::SSAOPass(CommandContext& ctx) {
+    GraphicsContext& gfxContext = ctx.GetGraphicsContext();
+    SSAO::Render(gfxContext, m_Camera);
+};
+
+void Sponza::LightGridPass(CommandContext& ctx) {
+    GraphicsContext& gfxContext = ctx.GetGraphicsContext();
+    Lighting::FillLightGrid(gfxContext, m_Camera);
+};
+
+void Sponza::LightShadowPass(CommandContext& ctx) {
+    GraphicsContext& gfxContext = ctx.GetGraphicsContext();
+    SetupGraphicsState(gfxContext);
+    RenderLightShadows(gfxContext, m_Camera);
+}
+
+void Sponza::SetupGraphicsState(GraphicsContext& gfxContext) {
+    gfxContext.SetRootSignature(Renderer::m_RootSig);
+    gfxContext.SetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Renderer::s_TextureHeap.GetHeapPointer());
+    gfxContext.SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    gfxContext.SetIndexBuffer(m_Model.GetIndexBuffer());
+    gfxContext.SetVertexBuffer(0, m_Model.GetVertexBuffer());
+}
+
+void Sponza::RecalculateParticles(CommandContext& ctx) {
+    ParticleEffectManager::Update(ctx.GetComputeContext(), Graphics::GetFrameTime());
+}
+
+void Sponza::GenerateCameraVelocityBuffer(CommandContext& ctx) {
+    // Some systems generate a per-pixel velocity buffer to better track dynamic and skinned meshes.  Everything
+    // is static in our scene, so we generate velocity from camera motion and the depth buffer.  A velocity buffer
+    // is necessary for all temporal effects (and motion blur).
+    MotionBlur::GenerateCameraVelocityBuffer(ctx.GetGraphicsContext(), m_Camera, true);
+}
+
+void Sponza::ResolveTAA(CommandContext& ctx) {
+    TemporalEffects::ResolveImage(ctx.GetGraphicsContext());
+}
+
+void Sponza::RenderParticles(CommandContext& ctx) {
+    ParticleEffectManager::Render(ctx.GetGraphicsContext(), m_Camera, g_SceneColorBuffer, g_SceneDepthBuffer,  g_LinearDepth[m_FrameIndex]);
+}
+
+void Sponza::RenderDOF(CommandContext& ctx) {
+    DepthOfField::Render(ctx.GetGraphicsContext(), m_Camera.GetNearClip(), m_Camera.GetFarClip());
+}
+
+void Sponza::RenderBlur(CommandContext& ctx) {
+    MotionBlur::RenderObjectBlur(ctx.GetGraphicsContext(), g_VelocityBuffer);
 }

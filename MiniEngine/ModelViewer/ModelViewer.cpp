@@ -258,17 +258,33 @@ void ModelViewer::RenderScene( void )
     const D3D12_VIEWPORT& viewport = m_MainViewport;
     const D3D12_RECT& scissor = m_MainScissor;
 
-    ParticleEffectManager::Update(gfxContext.GetComputeContext(), Graphics::GetFrameTime());
-
     if (m_ModelInst.IsNull() && !m_useRenderGraph)
     {
 #ifdef LEGACY_RENDERER
+        ParticleEffectManager::Update(gfxContext.GetComputeContext(), Graphics::GetFrameTime());
+
         Sponza::RenderScene(gfxContext, m_Camera, viewport, scissor);
+
+        // Some systems generate a per-pixel velocity buffer to better track dynamic and skinned meshes.  Everything
+        // is static in our scene, so we generate velocity from camera motion and the depth buffer.  A velocity buffer
+        // is necessary for all temporal effects (and motion blur).
+        MotionBlur::GenerateCameraVelocityBuffer(gfxContext, m_Camera, true);
+
+        TemporalEffects::ResolveImage(gfxContext);
+
+        ParticleEffectManager::Render(gfxContext, m_Camera, g_SceneColorBuffer, g_SceneDepthBuffer,  g_LinearDepth[FrameIndex]);
+
+        // Until I work out how to couple these two, it's "either-or".
+        if (DepthOfField::Enable)
+            DepthOfField::Render(gfxContext, m_Camera.GetNearClip(), m_Camera.GetFarClip());
+        else
+            MotionBlur::RenderObjectBlur(gfxContext, g_VelocityBuffer);
 #endif
     }
     else if (m_ModelInst.IsNull() && m_useRenderGraph)
     {
-        Sponza::RenderSceneRenderGraph(gfxContext, m_Camera, viewport, scissor);
+        //Sponza::RenderSceneRenderGraph(gfxContext, m_Camera, viewport, scissor);
+        Sponza::RenderSceneRenderGraphStoraged(gfxContext, m_Camera, viewport, scissor);
     }
     else
     {
@@ -349,21 +365,6 @@ void ModelViewer::RenderScene( void )
             sorter.RenderMeshes(MeshSorter::kTransparent, gfxContext, globals);
         }
     }
-
-    // Some systems generate a per-pixel velocity buffer to better track dynamic and skinned meshes.  Everything
-    // is static in our scene, so we generate velocity from camera motion and the depth buffer.  A velocity buffer
-    // is necessary for all temporal effects (and motion blur).
-    MotionBlur::GenerateCameraVelocityBuffer(gfxContext, m_Camera, true);
-
-    TemporalEffects::ResolveImage(gfxContext);
-
-    ParticleEffectManager::Render(gfxContext, m_Camera, g_SceneColorBuffer, g_SceneDepthBuffer,  g_LinearDepth[FrameIndex]);
-
-    // Until I work out how to couple these two, it's "either-or".
-    if (DepthOfField::Enable)
-        DepthOfField::Render(gfxContext, m_Camera.GetNearClip(), m_Camera.GetFarClip());
-    else
-        MotionBlur::RenderObjectBlur(gfxContext, g_VelocityBuffer);
 
     gfxContext.Finish();
 }
