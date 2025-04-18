@@ -16,7 +16,7 @@ namespace RenderGraph
         virtual ~RenderPass() = default;
 
         virtual void Setup(RenderGraph& renderGraph) = 0;
-        virtual void Execute(ID3D12GraphicsCommandList* cmdList) = 0;
+        virtual void Execute(CommandContext& ctx) = 0;
 
         const std::wstring& GetName() const;
 

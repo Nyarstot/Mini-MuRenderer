@@ -15,8 +15,23 @@ namespace RenderGraph
 
     }
 
-    void LambdaRenderPass::Execute(ID3D12GraphicsCommandList* cmdList)
+    void LambdaRenderPass::Execute(CommandContext& ctx)
     {
-        m_executeFunction(cmdList);
+        m_executeFunction(ctx.GetCommandList());
+    }
+
+    LambdaContextRenderPass::LambdaContextRenderPass(const std::wstring& name, executeContextFunction execFunc)
+        : RenderPass(name), m_executeFunction(std::move(execFunc))
+    {
+    }
+
+    void LambdaContextRenderPass::Setup(RenderGraph& renderGraph)
+    {
+
+    }
+
+    void LambdaContextRenderPass::Execute(CommandContext& ctx)
+    {
+        m_executeFunction(ctx);
     }
 }
