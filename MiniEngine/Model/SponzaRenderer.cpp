@@ -46,6 +46,9 @@
 #include "../Core/RenderGraph/RenderGraphResource.h"
 #include "../Core/RenderGraph/Passes/LambdaRenderPass.h"
 
+#include "../Core/MultiGPU/CrossAdapterResource.h"
+#include "../Core/MultiGPU/MultiAdapterManager.h"
+
 using namespace Math;
 using namespace Graphics;
 
@@ -71,6 +74,7 @@ namespace Sponza
     // working with raw pointer and i'm ok with this.
     RenderGraph::RenderGraph* g_renderGraph;
     RenderGraph::RenderGraphStoraged* g_renderGraphStoraged;
+    bool g_useMultiGPU = false;
 
     Vector3 m_SunDirection;
     ShadowCamera m_SunShadow;
@@ -580,6 +584,12 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
     auto shadowPassNode     = std::make_unique<RenderGraph::LambdaRenderPass>(L"ShadowPass", shadowPass);
     auto depthPrePassNode   = std::make_unique<RenderGraph::LambdaRenderPass>(L"DepthPrePass", depthPrePass);
     auto mainRenderPassNode = std::make_unique<RenderGraph::LambdaRenderPass>(L"MainRenderPass", mainRenderPass);
+
+    shadowPassNode->SetMultiAdapterAllowed(true, 1);
+    shadowPassNode->AddDependentAdapter(1);
+
+    depthPrePassNode->SetMultiAdapterAllowed(true, 1);
+    depthPrePassNode->AddDependentAdapter(0);
 
     // -------- Add render passes to graph
 

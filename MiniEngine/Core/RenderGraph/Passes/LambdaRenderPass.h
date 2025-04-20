@@ -14,8 +14,11 @@ namespace RenderGraph
         ~LambdaRenderPass() = default;
 
         void Setup(RenderGraph& renderGraph) override;
-        void Execute(CommandContext& ctx) override;
 
+
+    protected:
+        void InternalExecute(CommandContext& ctx) override;
+        void InternalExecuteMultiAdapter(CommandContext& ctx) override;
 
     private:
         executeFunction m_executeFunction;
@@ -30,8 +33,10 @@ namespace RenderGraph
         ~LambdaContextRenderPass() = default;
 
         void Setup(RenderGraph& renderGraph) override;
-        void Execute(CommandContext& ctx) override;
 
+    protected:
+        void InternalExecute(CommandContext& ctx) override;
+        void InternalExecuteMultiAdapter(CommandContext& ctx) override;
 
     private:
         executeContextFunction m_executeFunction;

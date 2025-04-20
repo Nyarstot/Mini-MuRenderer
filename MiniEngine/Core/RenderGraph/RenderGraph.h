@@ -13,6 +13,8 @@ namespace RenderGraph
     {
     private:
         std::unordered_map<std::wstring, std::shared_ptr<RenderGraphResource>> m_resources;
+        ComPtr<ID3D12Fence> m_sharedFence;
+        UINT64 m_fenceValue = 1;
 
     public:
         RenderGraph();
@@ -23,6 +25,8 @@ namespace RenderGraph
         void Compile();
         void Execute(CommandContext& ctx);
         void Clear();
+
+        void AssignPassToAdapter(const std::wstring& passName, std::size_t adapterIndex, const std::vector<std::size_t>& dependentAdapters = {});
 
         nlohmann::json Serialize() const;
         void ExportToJSON() const;

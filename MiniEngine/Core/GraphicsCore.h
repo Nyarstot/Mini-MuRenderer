@@ -18,6 +18,8 @@
 #include "RootSignature.h"
 #include "GraphicsCommon.h"
 
+#include "MultiGPU/MultiAdapterManager.h"
+
 class CommandListManager;
 class ContextManager;
 
@@ -38,6 +40,8 @@ namespace Graphics
 
     extern ID3D12Device* g_Device;
     extern ID3D12Device* g_SecondaryDevice;
+    extern MultiGPU::MultiAdapterManager g_multiAdapterManager;
+
     extern CommandListManager g_CommandManager;
     extern ContextManager g_ContextManager;
 

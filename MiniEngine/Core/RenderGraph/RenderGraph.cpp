@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "RenderGraph/RenderGraph.h"
 #include "Util/StringUtils.h"
+#include "GraphicsCore.h"
 
 #include <fstream>
 
@@ -10,6 +11,9 @@ namespace RenderGraph
     RenderGraph::RenderGraph()
         : BaseGraph<RenderPass, RenderGraphEdgeResourceData>()
     {
+        ASSERT_SUCCEEDED(Graphics::g_multiAdapterManager.GetDevice(0)->CreateFence(
+            0, D3D12_FENCE_FLAG_SHARED | D3D12_FENCE_FLAG_SHARED_CROSS_ADAPTER, IID_PPV_ARGS(&m_sharedFence)
+        ));
     }
 
     std::shared_ptr<RenderGraphResource> RenderGraph::CreateResource(const std::wstring& name, const RenderGraphResourceDesc& desc)
@@ -76,9 +80,19 @@ namespace RenderGraph
 
     void RenderGraph::Execute(CommandContext& ctx)
     {
+        m_fenceValue = 1;
+
         for (std::size_t nodeId : m_executionOrder) {
             auto& node = GetNode(nodeId);
-            node.data->Execute(ctx);
+            if (node.data->IsMultiAdapterAllowed()) {
+                node.data->SetSharedFence(m_sharedFence);
+                node.data->Execute(ctx);
+                m_fenceValue++;
+            }
+            else
+            {
+                node.data->Execute(ctx);
+            }
         }
     }
 

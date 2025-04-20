@@ -106,7 +106,8 @@
     <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="MotionBlur.h" />
-    <ClInclude Include="MultiGPU\MultiDevice.h" />
+    <ClInclude Include="MultiGPU\CrossAdapterResource.h" />
+    <ClInclude Include="MultiGPU\MultiAdapterManager.h" />
     <ClInclude Include="ParticleEffect.h" />
     <ClInclude Include="ParticleEffectManager.h" />
     <ClInclude Include="ParticleEffectProperties.h" />
@@ -175,6 +176,8 @@
     <ClCompile Include="Math\Frustum.cpp" />
     <ClCompile Include="Math\Random.cpp" />
     <ClCompile Include="MotionBlur.cpp" />
+    <ClCompile Include="MultiGPU\CrossAdapterResource.cpp" />
+    <ClCompile Include="MultiGPU\MultiAdapterManager.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
     <ClCompile Include="ParticleEffectManager.cpp" />
     <ClCompile Include="ParticleEmissionProperties.cpp" />

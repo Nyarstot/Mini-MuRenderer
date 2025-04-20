@@ -290,8 +290,8 @@ void ModelViewer::RenderScene( void )
     }
     else if (m_ModelInst.IsNull() && m_useRenderGraph)
     {
-        //Sponza::RenderSceneRenderGraph(gfxContext, m_Camera, viewport, scissor);
-        Sponza::RenderSceneRenderGraphStoraged(gfxContext, m_Camera, viewport, scissor);
+        Sponza::RenderSceneRenderGraph(gfxContext, m_Camera, viewport, scissor);
+        //Sponza::RenderSceneRenderGraphStoraged(gfxContext, m_Camera, viewport, scissor);
     }
     else
     {

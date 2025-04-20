@@ -52,6 +52,7 @@ namespace Graphics
     ID3D12Device* g_Device = nullptr;
     ID3D12Device* g_SecondaryDevice = nullptr;
 
+    MultiGPU::MultiAdapterManager g_multiAdapterManager;
     CommandListManager g_CommandManager;
     ContextManager g_ContextManager;
 
@@ -355,7 +356,11 @@ void Graphics::Initialize(bool RequireDXRSupport)
         if (DeveloperModeEnabled)
             g_Device->SetStablePowerState(TRUE);
     }
-#endif	
+#endif
+
+    g_multiAdapterManager.AppendDevice(g_Device, pAdapter.Get());
+    g_multiAdapterManager.AppendDevice(g_SecondaryDevice, pSecondaryAdapter.Get());
+    g_multiAdapterManager.CreateSharedFence();
 
 #if _DEBUG
     ID3D12InfoQueue* pInfoQueue = nullptr;

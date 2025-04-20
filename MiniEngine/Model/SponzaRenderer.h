@@ -86,4 +86,6 @@ namespace Sponza
     extern ExpVar m_AmbientIntensity;
     extern ExpVar m_SunLightIntensity;
 
+    extern bool g_useMultiGPU;
+
 }

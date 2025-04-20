@@ -515,6 +515,8 @@
     <ClCompile Include="RenderGraph\Passes\LambdaRenderPass.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphBuilder.cpp" />
     <ClCompile Include="Util\StringUtils.cpp" />
+    <ClCompile Include="MultiGPU\CrossAdapterResource.cpp" />
+    <ClCompile Include="MultiGPU\MultiAdapterManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BitonicSort.h" />
@@ -588,7 +590,7 @@
     <ClInclude Include="Utility.h" />
     <ClInclude Include="Util\CommandLineArg.h" />
     <ClInclude Include="VectorMath.h" />
-    <ClInclude Include="MultiGPU\MultiDevice.h" />
+    <ClInclude Include="MultiGPU\MultiAdapterManager.h" />
     <ClInclude Include="Util\D3D12Utils.h" />
     <ClInclude Include="RenderGraph\Base\BaseGraph.h" />
     <ClInclude Include="RenderGraph\RenderGraph.h" />
@@ -598,6 +600,7 @@
     <ClInclude Include="json.hpp" />
     <ClInclude Include="RenderGraph\RenderGraphBuilder.h" />
     <ClInclude Include="Util\StringUtils.h" />
+    <ClInclude Include="MultiGPU\CrossAdapterResource.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl" />
