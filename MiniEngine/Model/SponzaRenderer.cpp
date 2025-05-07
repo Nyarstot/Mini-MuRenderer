@@ -46,7 +46,7 @@
 #include "../Core/RenderGraph/RenderGraphResource.h"
 #include "../Core/RenderGraph/Passes/LambdaRenderPass.h"
 
-#include "../Core/MultiGPU/CrossAdapterResource.h"
+//#include "../Core/MultiGPU/CrossAdapterResource.h"
 #include "../Core/MultiGPU/MultiAdapterManager.h"
 
 using namespace Math;

@@ -106,7 +106,6 @@
     <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="MotionBlur.h" />
-    <ClInclude Include="MultiGPU\CrossAdapterResource.h" />
     <ClInclude Include="MultiGPU\MultiAdapterManager.h" />
     <ClInclude Include="ParticleEffect.h" />
     <ClInclude Include="ParticleEffectManager.h" />
@@ -125,6 +124,7 @@
     <ClInclude Include="RenderGraph\RenderGraphBuilder.h" />
     <ClInclude Include="RenderGraph\RenderGraphResource.h" />
     <ClInclude Include="RenderGraph\RenderPass.h" />
+    <ClInclude Include="RenderGraph\Utils\RenderGraphUtils.h" />
     <ClInclude Include="RootSignature.h" />
     <ClInclude Include="SamplerManager.h" />
     <ClInclude Include="ShadowBuffer.h" />
@@ -176,7 +176,6 @@
     <ClCompile Include="Math\Frustum.cpp" />
     <ClCompile Include="Math\Random.cpp" />
     <ClCompile Include="MotionBlur.cpp" />
-    <ClCompile Include="MultiGPU\CrossAdapterResource.cpp" />
     <ClCompile Include="MultiGPU\MultiAdapterManager.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
     <ClCompile Include="ParticleEffectManager.cpp" />
@@ -194,6 +193,7 @@
     <ClCompile Include="RenderGraph\RenderGraphBuilder.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphResource.cpp" />
     <ClCompile Include="RenderGraph\RenderPass.cpp" />
+    <ClCompile Include="RenderGraph\Utils\RenderGraphUtils.cpp" />
     <ClCompile Include="RootSignature.cpp" />
     <ClCompile Include="SamplerManager.cpp" />
     <ClCompile Include="ShadowBuffer.cpp" />
