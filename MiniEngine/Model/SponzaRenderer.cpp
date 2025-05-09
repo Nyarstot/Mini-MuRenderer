@@ -585,11 +585,8 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
     auto depthPrePassNode   = std::make_unique<RenderGraph::LambdaRenderPass>(L"DepthPrePass", depthPrePass);
     auto mainRenderPassNode = std::make_unique<RenderGraph::LambdaRenderPass>(L"MainRenderPass", mainRenderPass);
 
-    shadowPassNode->SetMultiAdapterAllowed(true, 1);
-    shadowPassNode->AddDependentAdapter(1);
-
-    depthPrePassNode->SetMultiAdapterAllowed(true, 1);
-    depthPrePassNode->AddDependentAdapter(0);
+    //shadowPassNode->SetMultiAdapterAllowed(true, 1);
+    //shadowPassNode->AddDependentAdapter(1);
 
     // -------- Add render passes to graph
 

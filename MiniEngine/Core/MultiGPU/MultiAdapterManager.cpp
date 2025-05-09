@@ -25,4 +25,11 @@ namespace MultiGPU
     {
         return m_devices[index];
     }
+
+    bool MultiAdapterManager::CheckRowMajorTextureSupport(ID3D12Device* device)
+    {
+        D3D12_FEATURE_DATA_D3D12_OPTIONS options = {};
+        ASSERT_SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, reinterpret_cast<void*>(&options), sizeof(options)));
+        return options.CrossAdapterRowMajorTextureSupported;
+    }
 }

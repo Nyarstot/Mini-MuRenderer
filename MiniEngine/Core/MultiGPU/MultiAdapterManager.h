@@ -22,5 +22,8 @@ namespace MultiGPU
         std::size_t GetDeviceCount() const;
         ID3D12Device* GetDevice(std::size_t index = 0) const;
 
+    public:
+        static bool CheckRowMajorTextureSupport(ID3D12Device* device);
+
     };
 }
