@@ -5,8 +5,12 @@
 
 namespace RenderGraph
 {
-    RenderPass::RenderPass(const std::wstring& name)
-        : m_name(name)
+    RenderPass::RenderPass(const std::wstring& name, RenderGraph* renderGraph)
+        : m_name(name), m_renderGraph(renderGraph)
+    {
+    }
+
+    void RenderPass::Setup(const GraphicsContext& ctx)
     {
 
     }
@@ -46,5 +50,33 @@ namespace RenderGraph
     void RenderPass::SetSharedFence(ComPtr<ID3D12Fence> fence)
     {
         m_sharedFence = fence;
+    }
+
+    RenderPass& RenderPass::ReadFrom(Span<const ResourceEntry> resources)
+    {
+        for (auto resource : resources) {
+            if (resource.resource->IsValid()) {
+                assert(resource.type == RenderGraphResourceType::Buffer || resource.type == RenderGraphResourceType::Texture);
+                m_reads.insert(resource);
+            }
+        }
+
+        return *this;
+    }
+
+    RenderPass& RenderPass::WriteTo(Span<ResourceEntry* const> resources)
+    {
+        for (auto resource : resources) {
+            if (resource && resource->resource->IsValid()) {
+                assert(resource->type == RenderGraphResourceType::Buffer || resource->type == RenderGraphResourceType::Texture);
+
+                auto iter = m_reads.find(*resource);
+                if (iter == m_reads.end()) {
+                    m_writes.insert(*resource);
+                }
+            }
+        }
+
+        return *this;
     }
 }

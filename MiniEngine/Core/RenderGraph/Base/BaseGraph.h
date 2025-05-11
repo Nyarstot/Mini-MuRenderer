@@ -11,6 +11,10 @@
 
 namespace RenderGraph
 {
+    /**
+    * @brief basic node type of the DAG graph.
+    * @tparam NodeType data type hold by the graph node.
+    */
     template<typename NodeType>
     struct GraphNode final
     {
@@ -19,14 +23,24 @@ namespace RenderGraph
         std::vector<std::size_t> outputEdges;
     };
 
+    /**
+    * @brief basic edge type of the DAG graph.
+    * @tparam EdgeType data type stored on the edges of the graph.
+    */
     template<typename EdgeType>
-    struct GraphEdge
+    struct GraphEdge final
     {
         std::unique_ptr<EdgeType> data;
         std::size_t fromNode;
         std::size_t toNode;
     };
 
+    /**
+    * @class BaseGraph BaseGraph.h "Core/RenderGraph/Base/BaseGraph.h"
+    * @brief base class for mathematical directional graphs.
+    * @tparam NodeType type of the data stored in nodes.
+    * @tparam EdgeType type if the data stored on edges.
+    */
     template <typename NodeType, typename EdgeType>
     class BaseGraph
     {
@@ -43,12 +57,23 @@ namespace RenderGraph
         BaseGraph() = default;
         virtual ~BaseGraph() = default;
 
+        /**
+        * @brief creates and appends new graph node.
+        * @param[in] nodeData data to store in the created node.
+        * @returns id of the created node.
+        */
         std::size_t AddNode(NodeTypePtr nodeData) {
             std::size_t id = m_nodes.size();
             m_nodes.push_back({ std::move(nodeData), {}, {} });
             return id;
         }
 
+        /**
+        * @brief creates new edge between two nodes.
+        * @param[in] fromNode node from which the connection comes.
+        * @param[in] toNode the node to which the connection is received.
+        * @param[in] edgeData data to store on the edge.
+        */
         std::size_t AddEdge(std::size_t fromNode, std::size_t toNode, EdgeTypePtr edgeData) {
             auto nodesSize = m_nodes.size();
             assert(fromNode < m_nodes.size() && toNode < m_nodes.size());
@@ -62,6 +87,9 @@ namespace RenderGraph
             return id;
         }
 
+        /**
+        * @brief clears all the graph
+        */
         void Clear() {
             for (auto& node : m_nodes) {
                 if (node.data) {
@@ -81,28 +109,61 @@ namespace RenderGraph
             m_edges.clear();
         }
 
+        /**
+        * @brief gets a specific graph node from a graph by id.
+        * @param[in] id integer identifier of the node.
+        * @returns constant node from the graph.
+        */
         const GraphNode<NodeType>& GetNode(std::size_t id) const {
             assert(id < m_nodes.size());
             return m_nodes[id];
         }
 
+        /**
+        * @brief gets a specific graph node from a graph by id.
+        * @param[in] id integer identifier of the node.
+        * @returns node from the graph.
+        */
         GraphNode<NodeType>& GetNode(std::size_t id) {
             assert(id < m_nodes.size());
             return m_nodes[id];
         }
 
+        /**
+        * @brief gets a specific graph edge from a graph by id.
+        * @param[in] id integer identifier of the edge.
+        * @returns constant edge from the graph.
+        */
         const GraphEdge<EdgeType>& GetEdge(std::size_t id) const {
             assert(id < m_edges.size());
             return m_edges[id];
         }
 
+        /**
+        * @brief gets a specific graph edge from a graph by id.
+        * @param[in] id integer identifier of the edge.
+        * @returns edge from the graph.
+        */
         GraphEdge<EdgeType>& GetEdge(std::size_t id) {
             assert(id < m_edges.size());
             return m_edges[id];
         }
 
+        /**
+        * @brief gets total node count in the graph.
+        * @returns count of nodes in graph.
+        */
         std::size_t GetNodeCount() const { return m_nodes.size(); }
+
+        /**
+        * @brief gets total edge count in the graph.
+        * @returns count of edges in graph.
+        */
         std::size_t GetEdgeCount() const { return m_edges.size(); }
+
+        void SetTitle(const std::wstring& name) {
+            m_title = name;
+        }
 
     };
 

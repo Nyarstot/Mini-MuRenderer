@@ -29,6 +29,7 @@
 #include "SponzaRenderer.h"
 #include "Renderer.h"
 #include "Display.h"
+#include "RenderGraph/Base/Span.h"
 
 // From Model
 #include "ModelH3D.h"
@@ -45,6 +46,9 @@
 #include "../Core/RenderGraph/RenderPass.h"
 #include "../Core/RenderGraph/RenderGraphResource.h"
 #include "../Core/RenderGraph/Passes/LambdaRenderPass.h"
+
+// Render graph passes
+#include "Pipeline/Sponza/LightShadowsPass.h"
 
 //#include "../Core/MultiGPU/CrossAdapterResource.h"
 #include "../Core/MultiGPU/MultiAdapterManager.h"
@@ -174,7 +178,10 @@ void Sponza::Startup( Camera& Camera, bool useRenderGraph)
 
     ParticleEffects::InitFromJSON(L"Sponza/particles.json");
 
-    Sponza::RenderGraphStartup();
+    if (useRenderGraph) {
+        //Sponza::RenderGraphStartup();
+        Sponza::RenderGraphSetup();
+    }
 
     float modelRadius = Length(m_Model.GetBoundingBox().GetDimensions()) * 0.5f;
     const Vector3 eye = m_Model.GetBoundingBox().GetCenter() + Vector3(modelRadius * 0.5f, 0.0f, 0.0f);
@@ -444,6 +451,8 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
     {
         g_renderGraph->Clear();
     }
+
+    //g_renderGraph->RegisterExistingResource(&g_ShadowBuffer);
 
     // Define render passes using lambdas that capture the needed context
     auto shadowPass = [&](ID3D12GraphicsCommandList* cmdList) {
@@ -828,6 +837,23 @@ void Sponza::RenderSceneRenderGraphStoraged(GraphicsContext& gfxContext, const M
 
     g_renderGraphStoraged->Compile();
     g_renderGraphStoraged->Execute(gfxContext);
+}
+
+void Sponza::RenderGraphSetup()
+{
+    if (g_renderGraph == nullptr) {
+        g_renderGraph = new RenderGraph::RenderGraph(L"Sponza Render Graph");
+    }
+
+    RenderGraph::ResourceEntry sceneColorBuffer = g_renderGraph->RegisterExternalResource(L"SceneColorBuffer", &g_SceneColorBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    RenderGraph::ResourceEntry sceneDepthBuffer = g_renderGraph->RegisterExternalResource(L"SceneDepthBuffer", &g_SceneDepthBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    RenderGraph::ResourceEntry sceneNormalBuffer = g_renderGraph->RegisterExternalResource(L"SceneNormalBuffer", &g_SceneNormalBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    RenderGraph::ResourceEntry shadowBuffer = g_renderGraph->RegisterExternalResource(L"ShadowBuffer", &g_ShadowBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    RenderGraph::ResourceEntry velocityBuffer = g_renderGraph->RegisterExternalResource(L"VelocityBuffer", &g_VelocityBuffer, RenderGraph::RenderGraphResourceType::Texture);
+
+    auto lightShadowPass = std::make_unique<SponzaPasses::LightShadowsPass>(g_renderGraph);
+    lightShadowPass->ReadFrom({ sceneDepthBuffer, shadowBuffer });
+    lightShadowPass->WriteTo({ &velocityBuffer });
 }
 
 void Sponza::RenderGraphStartup()

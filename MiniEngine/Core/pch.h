@@ -66,6 +66,7 @@
 #include <cwctype>
 #include <exception>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <ppltasks.h>
 #include <functional>

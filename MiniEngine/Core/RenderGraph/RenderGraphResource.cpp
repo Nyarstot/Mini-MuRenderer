@@ -9,9 +9,10 @@ namespace RenderGraph
     {
     }
 
-    RenderGraphResource::RenderGraphResource(ID3D12Resource* resource, const std::wstring& name, const RenderGraphResourceDesc& desc)
-        : GpuResource(resource, desc.initialState), m_name(name), m_desc(desc)
+    RenderGraphResource::RenderGraphResource(const std::wstring& name, GpuResource* resource)
+        : m_name(name)
     {
+        m_pResource = resource->GetResource();
     }
 
     const std::wstring& RenderGraphResource::GetName() const
@@ -22,6 +23,11 @@ namespace RenderGraph
     const RenderGraphResourceDesc& RenderGraphResource::GetDescription() const
     {
         return m_desc;
+    }
+
+    bool RenderGraphResource::IsValid() const
+    {
+        return m_pResource != nullptr;
     }
 
     void RenderGraphResource::SetResource(ComPtr<ID3D12Resource> resource)

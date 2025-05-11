@@ -6,7 +6,7 @@
 
 namespace RenderGraph
 {
-    namespace utils
+    namespace Utils
     {
         /**
         * @brief converts render graph resource description to D3D12_RESOURCE_DESC.
@@ -52,6 +52,12 @@ namespace RenderGraph
         {
             UINT64 size = 0;
             D3D12_RESOURCE_DESC resourceDesc = ConvertRGResourceDescToD3D12Desc(desc);
+            Graphics::g_multiAdapterManager.GetDevice()->GetCopyableFootprints(&resourceDesc, 0, 1, 0, nullptr, nullptr, nullptr, &size);
+            return size;
+        }
+
+        inline UINT64 CalculateResourceSize(D3D12_RESOURCE_DESC resourceDesc) {
+            UINT64 size = 0;
             Graphics::g_multiAdapterManager.GetDevice()->GetCopyableFootprints(&resourceDesc, 0, 1, 0, nullptr, nullptr, nullptr, &size);
             return size;
         }

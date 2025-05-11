@@ -13,9 +13,6 @@ namespace RenderGraph
         LambdaRenderPass(const std::wstring& name, executeFunction execFunc);
         ~LambdaRenderPass() = default;
 
-        void Setup(RenderGraph& renderGraph) override;
-
-
     protected:
         void InternalExecute(CommandContext& ctx) override;
         void InternalExecuteMultiAdapter(CommandContext& ctx) override;
@@ -31,8 +28,6 @@ namespace RenderGraph
         using executeContextFunction = std::function<void(CommandContext&)>;
         LambdaContextRenderPass(const std::wstring& name, executeContextFunction execFunc);
         ~LambdaContextRenderPass() = default;
-
-        void Setup(RenderGraph& renderGraph) override;
 
     protected:
         void InternalExecute(CommandContext& ctx) override;

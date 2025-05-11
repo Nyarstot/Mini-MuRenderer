@@ -10,11 +10,6 @@ namespace RenderGraph
     {
     }
 
-    void LambdaRenderPass::Setup(RenderGraph& renderGraph)
-    {
-
-    }
-
     void LambdaRenderPass::InternalExecute(CommandContext& ctx)
     {
         m_executeFunction(ctx.GetCommandList());
@@ -69,11 +64,6 @@ namespace RenderGraph
     LambdaContextRenderPass::LambdaContextRenderPass(const std::wstring& name, executeContextFunction execFunc)
         : RenderPass(name), m_executeFunction(std::move(execFunc))
     {
-    }
-
-    void LambdaContextRenderPass::Setup(RenderGraph& renderGraph)
-    {
-
     }
 
     void LambdaContextRenderPass::InternalExecute(CommandContext& ctx)

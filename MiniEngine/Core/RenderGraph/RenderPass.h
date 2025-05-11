@@ -1,8 +1,11 @@
 #pragma once
 
+#include "CommandContext.h"
+#include "RenderGraph/Base/Span.h"
+#include "RenderGraph/RenderGraphRegistry.h"
+
 
 using namespace Microsoft::WRL;
-
 namespace RenderGraph
 {
     class RenderGraph;
@@ -12,15 +15,20 @@ namespace RenderGraph
         std::wstring m_name;
 
     protected:
+        RenderGraph* m_renderGraph;
+        std::unordered_set<ResourceEntry, ResourceEntryHash, ResourceEntryEqual> m_reads;
+        std::unordered_set<ResourceEntry, ResourceEntryHash, ResourceEntryEqual> m_writes;
+
         std::size_t m_execAdapterIndex;
         std::vector<std::size_t> m_dependentAdapters;
         bool m_multiAdapterAllowed = false;
         ComPtr<ID3D12Fence> m_sharedFence;
 
     protected:
-        explicit RenderPass(const std::wstring& name);
+        explicit RenderPass(const std::wstring& name, RenderGraph* renderGraph = nullptr);
         virtual void InternalExecute(CommandContext& ctx) = 0;
         virtual void InternalExecuteMultiAdapter(CommandContext& ctx) = 0;
+        virtual void Setup(const GraphicsContext& ctx);
 
     public:
         virtual ~RenderPass() = default;
@@ -30,9 +38,10 @@ namespace RenderGraph
         void AddDependentAdapter(std::size_t adapterIndex);
         void SetSharedFence(ComPtr<ID3D12Fence> fence);
 
-        virtual void Setup(RenderGraph& renderGraph) = 0;
-        virtual void Execute(CommandContext& ctx);
+        RenderPass& ReadFrom(Span<const ResourceEntry> resources);
+        RenderPass& WriteTo(Span<ResourceEntry* const> resources);
 
+        virtual void Execute(CommandContext& ctx);
         const std::wstring& GetName() const;
 
     };

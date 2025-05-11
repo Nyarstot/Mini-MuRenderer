@@ -4,7 +4,7 @@
 
 namespace RenderGraph
 {
-    namespace utils
+    namespace Utils
     {
 
     }

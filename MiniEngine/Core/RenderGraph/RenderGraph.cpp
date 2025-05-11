@@ -8,12 +8,29 @@
 
 namespace RenderGraph
 {
-    RenderGraph::RenderGraph()
+    RenderGraph::RenderGraph(const std::wstring& name)
         : BaseGraph<RenderPass, RenderGraphEdgeResourceData>()
     {
         ASSERT_SUCCEEDED(Graphics::g_multiAdapterManager.GetDevice(0)->CreateFence(
             0, D3D12_FENCE_FLAG_SHARED | D3D12_FENCE_FLAG_SHARED_CROSS_ADAPTER, IID_PPV_ARGS(&m_sharedFence)
         ));
+
+        this->SetTitle(name);
+    }
+
+    ResourceEntry& RenderGraph::RegisterExternalResource(const std::wstring& name, GpuResource* resource, RenderGraphResourceType type)
+    {
+        return m_resourceRegistry.RegisterResource(name, resource, type);
+    }
+
+    std::size_t RenderGraph::AddRenderPass(std::unique_ptr<RenderPass> renderPass)
+    {
+        return this->AddNode(std::move(renderPass));
+    }
+
+    bool RenderGraph::IsResourceRegistered(const std::wstring& name) const
+    {
+        return m_resourceRegistry.IsResourceRegistered(name);
     }
 
     std::shared_ptr<RenderGraphResource> RenderGraph::CreateResource(const std::wstring& name, const RenderGraphResourceDesc& desc)
@@ -87,7 +104,6 @@ namespace RenderGraph
             if (node.data->IsMultiAdapterAllowed()) {
                 node.data->SetSharedFence(m_sharedFence);
                 node.data->Execute(ctx);
-                m_fenceValue++;
             }
             else
             {

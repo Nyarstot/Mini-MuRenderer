@@ -30,6 +30,7 @@ namespace Math
 namespace Sponza
 {
     void Startup( Math::Camera& camera, bool useRenderGraph);
+    void RenderGraphSetup();
     void RenderGraphStartup();
     void Cleanup( void );
 
