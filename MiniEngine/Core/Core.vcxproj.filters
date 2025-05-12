@@ -518,6 +518,7 @@
     <ClCompile Include="RenderGraph\Utils\RenderGraphUtils.cpp" />
     <ClCompile Include="MultiGPU\CrossAdapterCopyEngine.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphRegistry.cpp" />
+    <ClCompile Include="RenderGraph\MultiGPU\RGCrossAdapterResource.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BitonicSort.h" />
@@ -604,6 +605,7 @@
     <ClInclude Include="MultiGPU\CrossAdapterCopyEngine.h" />
     <ClInclude Include="RenderGraph\RenderGraphRegistry.h" />
     <ClInclude Include="RenderGraph\Base\Span.h" />
+    <ClInclude Include="RenderGraph\MultiGPU\RGCrossAdapterResource.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl" />

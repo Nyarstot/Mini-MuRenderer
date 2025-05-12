@@ -121,6 +121,7 @@
     <ClInclude Include="ReadbackBuffer.h" />
     <ClInclude Include="RenderGraph\Base\BaseGraph.h" />
     <ClInclude Include="RenderGraph\Base\Span.h" />
+    <ClInclude Include="RenderGraph\MultiGPU\RGCrossAdapterResource.h" />
     <ClInclude Include="RenderGraph\Passes\LambdaRenderPass.h" />
     <ClInclude Include="RenderGraph\RenderGraph.h" />
     <ClInclude Include="RenderGraph\RenderGraphRegistry.h" />
@@ -191,6 +192,7 @@
     <ClCompile Include="PostEffects.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="ReadbackBuffer.cpp" />
+    <ClCompile Include="RenderGraph\MultiGPU\RGCrossAdapterResource.cpp" />
     <ClCompile Include="RenderGraph\Passes\LambdaRenderPass.cpp" />
     <ClCompile Include="RenderGraph\RenderGraph.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphRegistry.cpp" />

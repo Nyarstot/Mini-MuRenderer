@@ -35,6 +35,18 @@ namespace RenderGraph
         CrossAdapterTexture
     };
 
+    enum class RenderGraphCommonResourceType
+    {
+        Unknonw,
+        DepthBuffer,
+        ColorBuffer,
+        ShadowBuffer,
+        StructuredBuffer,
+        ByteAddressBuffer,
+        TypedBuffer
+    };
+
+    // LEGACY REMOVE ASAP
     struct RenderGraphResourceDesc
     {
         RenderGraphResourceType type = RenderGraphResourceType::Unknown;
@@ -49,9 +61,12 @@ namespace RenderGraph
         D3D12_RESOURCE_STATES initialState  = D3D12_RESOURCE_STATE_COMMON;
     };
 
+
+
     /**
     * @class RenderGraphResource RenderGraphResource.h "Core/RenderGraph/RenderGraphResource.h"
     * @brief provides interface to interact with all the resources stored in render graph.
+    * LEGACY REMOVE ASAP
     */
     class RenderGraphResource : public GpuResource
     {
@@ -74,6 +89,7 @@ namespace RenderGraph
 
     };
 
+
     class RenderGraphEdgeResourceData
     {
     public:
@@ -89,5 +105,7 @@ namespace RenderGraph
         bool IsValid() const;
 
     };
+
+
 
 }

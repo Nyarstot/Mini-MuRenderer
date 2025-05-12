@@ -1,23 +1,16 @@
 #include "pch.h"
 #include "RenderGraph/RenderGraphRegistry.h"
-#include "RenderGraph/Utils/RenderGraphUtils.h"
 
 
 namespace RenderGraph
 {
-    ResourceEntry& RenderGraphRegistry::RegisterResource(const std::wstring& name, GpuResource* resource, RenderGraphResourceType type)
+    RenderGraphRegistry::RenderGraphRegistry()
     {
-        auto rgResource = std::make_shared<RenderGraphResource>(name, resource);
-        D3D12_RESOURCE_DESC resourceDesc = resource->GetResource()->GetDesc();
-
-        ResourceEntry entry = {
-            rgResource,
-            type,
-            Utils::CalculateResourceSize(resourceDesc)
-        };
-        m_resourceRegistry.insert({ name, entry});
-
-        return entry;
+        m_depthBuffers          = std::make_shared<std::vector<DepthBuffer*>>();
+        m_colorBuffers          = std::make_shared<std::vector<ColorBuffer*>>();
+        m_shadowBuffers         = std::make_shared<std::vector<ShadowBuffer*>>();
+        m_byteAddressBuffers    = std::make_shared<std::vector<ByteAddressBuffer*>>();
+        m_structuredBuffers     = std::make_shared<std::vector<StructuredBuffer*>>();
     }
 
     bool RenderGraphRegistry::IsResourceRegistered(const std::wstring& name) const
@@ -26,9 +19,14 @@ namespace RenderGraph
         return (it == m_resourceRegistry.end()) ? false : true;
     }
 
-    std::shared_ptr<RenderGraphResource> RenderGraphRegistry::GetRegisteredResource(const std::wstring& name) const
+    ResourceEntry& RenderGraphRegistry::GetRegisteredResourceEntry(const std::wstring& name) const
     {
-        return std::shared_ptr<RenderGraphResource>();
+        if (IsResourceRegistered(name)) {
+            ResourceEntry entry = m_resourceRegistry.at(name);
+            return entry;
+        }
+
+        throw std::runtime_error("Resource entry doesn't exists!");
     }
 
     UINT64 RenderGraphRegistry::GetRegisteredResourceSize(const std::wstring& name) const

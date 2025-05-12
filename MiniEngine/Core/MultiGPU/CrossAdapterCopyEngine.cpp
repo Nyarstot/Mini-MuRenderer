@@ -6,46 +6,35 @@ namespace MultiGPU
 {
     void CrossAdapterCopyEngine::Initialize()
     {
-        ID3D12Device* primaryDevice = m_multiAdapterManager.GetDevice();
-        ID3D12Device* secondaryDevice = m_multiAdapterManager.GetDevice(1);
-        if (!MultiAdapterManager::CheckRowMajorTextureSupport(secondaryDevice)) {
-            throw std::runtime_error("Given device doesn't support CASO");
+
+
+    }
+
+    CrossAdapterCopyEngine::CrossAdapterCopyEngine(const MultiAdapterManager& multiAdapterManager, bool rowMajorTextureSupport)
+        : m_multiAdapterManager(multiAdapterManager), m_rowMajorTextureSupport(rowMajorTextureSupport)
+    {
+    }
+
+    void CrossAdapterCopyEngine::CopyResource(ID3D12GraphicsCommandList* commandList, GpuResource* sourceResource, GpuResource* destinationResource)
+    {
+        if (m_rowMajorTextureSupport) {
+            // If cross-adapter row-major textures are supported, simply copy the texture
+            commandList->CopyResource(destinationResource->GetResource(), sourceResource->GetResource());
         }
+        else
+        {
+            // If not supported, we need to copy with explicit layout
+            D3D12_RESOURCE_DESC sourceDesc = sourceResource->GetResource()->GetDesc();
+            D3D12_PLACED_SUBRESOURCE_FOOTPRINT sourceLayout;
 
-        UINT64 textureSize = 0;
-        D3D12_RESOURCE_DESC crossAdapterResourceDesc = {};
-        crossAdapterResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
-        crossAdapterResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+            ID3D12Device* primaryDevice = m_multiAdapterManager.GetDevice();
+            primaryDevice->GetCopyableFootprints(
+                &sourceDesc, 0, 1, 0, &sourceLayout, nullptr, nullptr, nullptr
+            );
 
-        D3D12_RESOURCE_ALLOCATION_INFO textureInfo = primaryDevice->GetResourceAllocationInfo(0, 1, &crossAdapterResourceDesc);
-        textureSize = textureInfo.SizeInBytes;
-
-        // Create a heap for sharing
-        CD3DX12_HEAP_DESC heapDesc(
-            textureSize, D3D12_HEAP_TYPE_DEFAULT, 0,
-            D3D12_HEAP_FLAG_SHARED | D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER
-        );
-
-        ASSERT_SUCCEEDED(primaryDevice->CreateHeap(&heapDesc, IID_PPV_ARGS(&m_crossAdapterResourceHeaps[0])));
-
-        // Create heap handle
-        HANDLE heapHandle = nullptr;
-        ASSERT_SUCCEEDED(primaryDevice->CreateSharedHandle(
-            m_crossAdapterResourceHeaps[0].Get(),
-            nullptr, GENERIC_ALL, nullptr, &heapHandle
-        ));
-
-        ASSERT_SUCCEEDED(secondaryDevice->OpenSharedHandle(heapHandle, IID_PPV_ARGS(&m_crossAdapterResourceHeaps[1])));
-        CloseHandle(heapHandle);
-
-    }
-
-    CrossAdapterCopyEngine::CrossAdapterCopyEngine(const MultiAdapterManager& multiAdapterManager)
-        : m_multiAdapterManager(multiAdapterManager)
-    {
-    }
-
-    CrossAdapterCopyEngine::~CrossAdapterCopyEngine()
-    {
+            CD3DX12_TEXTURE_COPY_LOCATION dest(destinationResource->GetResource(), sourceLayout);
+            CD3DX12_TEXTURE_COPY_LOCATION src(sourceResource->GetResource(), 0);
+            // TODO: Add copying itself
+        }
     }
 }

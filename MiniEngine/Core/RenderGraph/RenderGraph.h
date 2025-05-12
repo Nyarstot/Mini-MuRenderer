@@ -25,15 +25,6 @@ namespace RenderGraph
     public:
         RenderGraph(const std::wstring& name = L"");
 
-        /**
-        * @brief registers externally created resource in render graph registry.
-        * @param[in] name resource name in registry to call.
-        * @param[in] resource external resource.
-        * @returns resource entry describes resource in registry;
-        */
-        ResourceEntry& RegisterExternalResource(const std::wstring& name, GpuResource* resource, RenderGraphResourceType type);
-
-        //std::size_t CreateRenderPass()
         std::size_t AddRenderPass(std::unique_ptr<RenderPass> renderPass);
 
         /**
@@ -68,6 +59,31 @@ namespace RenderGraph
         void ExportToJSON() const;
 
         D3D12_RESOURCE_STATES GetCurrentState(const std::shared_ptr<RenderGraphResource>& resource) const;
+
+    public:
+        /**
+        * @brief registers externally created resource in render graph registry.
+        * @param[in] name resource name to set under registry.
+        * @param[in] resource external resource.
+        * @returns resource entry describes resource in registry;
+        */
+        template<typename Ty>
+        ResourceEntry& RegisterExternalResource(const std::wstring& name, Ty* resource) {
+            return m_resourceRegistry.RegisterResource<Ty>(name, resource);
+        }
+
+
+        /**
+        * @brief gets previously registered gpu resource.
+        * @param[in] name name of the resource in registry.
+        * @tparam Ty type of the resource.
+        * @returns resource lying under given name in render graph registry.
+        */
+        template<typename Ty>
+        Ty* GetRegisteredResource(const std::wstring& name) {
+            return m_resourceRegistry.GetRegisteredResource<Ty>(name);
+        }
+
 
     };
 

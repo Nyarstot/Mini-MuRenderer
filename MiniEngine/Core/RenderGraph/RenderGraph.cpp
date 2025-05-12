@@ -18,11 +18,6 @@ namespace RenderGraph
         this->SetTitle(name);
     }
 
-    ResourceEntry& RenderGraph::RegisterExternalResource(const std::wstring& name, GpuResource* resource, RenderGraphResourceType type)
-    {
-        return m_resourceRegistry.RegisterResource(name, resource, type);
-    }
-
     std::size_t RenderGraph::AddRenderPass(std::unique_ptr<RenderPass> renderPass)
     {
         return this->AddNode(std::move(renderPass));

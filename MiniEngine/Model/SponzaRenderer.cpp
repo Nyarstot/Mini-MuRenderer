@@ -845,15 +845,67 @@ void Sponza::RenderGraphSetup()
         g_renderGraph = new RenderGraph::RenderGraph(L"Sponza Render Graph");
     }
 
-    RenderGraph::ResourceEntry sceneColorBuffer = g_renderGraph->RegisterExternalResource(L"SceneColorBuffer", &g_SceneColorBuffer, RenderGraph::RenderGraphResourceType::Texture);
-    RenderGraph::ResourceEntry sceneDepthBuffer = g_renderGraph->RegisterExternalResource(L"SceneDepthBuffer", &g_SceneDepthBuffer, RenderGraph::RenderGraphResourceType::Texture);
-    RenderGraph::ResourceEntry sceneNormalBuffer = g_renderGraph->RegisterExternalResource(L"SceneNormalBuffer", &g_SceneNormalBuffer, RenderGraph::RenderGraphResourceType::Texture);
-    RenderGraph::ResourceEntry shadowBuffer = g_renderGraph->RegisterExternalResource(L"ShadowBuffer", &g_ShadowBuffer, RenderGraph::RenderGraphResourceType::Texture);
-    RenderGraph::ResourceEntry velocityBuffer = g_renderGraph->RegisterExternalResource(L"VelocityBuffer", &g_VelocityBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //auto sceneColorBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"sceneColorBuffer", &g_SceneColorBuffer);
+    //auto shadowBuffer = g_renderGraph->RegisterExternalResource<ShadowBuffer>(L"shadowBuffer", &g_ShadowBuffer);
 
-    auto lightShadowPass = std::make_unique<SponzaPasses::LightShadowsPass>(g_renderGraph);
-    lightShadowPass->ReadFrom({ sceneDepthBuffer, shadowBuffer });
-    lightShadowPass->WriteTo({ &velocityBuffer });
+    //auto sceneColorBuffer = g_renderGraph->RegisterExternalResource(L"sceneDepthBuffer", &g_SceneDepthBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //auto sceneDepthBuffer = g_renderGraph->RegisterExternalResource(L"sceneColorBuffer", &g_SceneColorBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //auto sceneNormalBuffer = g_renderGraph->RegisterExternalResource(L"sceneNormalBuffer", &g_SceneNormalBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //auto postEffectBuffer = g_renderGraph->RegisterExternalResource(L"postEffectBuffer", &g_PostEffectsBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //auto velocityBuffer = g_renderGraph->RegisterExternalResource(L"velocityBuffer", &g_VelocityBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //auto overlayBuffer = g_renderGraph->RegisterExternalResource(L"horizontalBuffer", &g_HorizontalBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //auto shadowBuffer = g_renderGraph->RegisterExternalResource(L"shadowBuffer", &g_ShadowBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //// ----
+    //auto ssaoFillScreen = g_renderGraph->RegisterExternalResource(L"ssaoFullScreen", &g_SSAOFullScreen, RenderGraph::RenderGraphResourceType::Texture);
+    //auto linearDepth1 = g_renderGraph->RegisterExternalResource(L"linearDepth1", &g_LinearDepth[0], RenderGraph::RenderGraphResourceType::Texture);
+    //auto linearDepth2 = g_renderGraph->RegisterExternalResource(L"linearDepth2", &g_LinearDepth[1], RenderGraph::RenderGraphResourceType::Texture);
+    //auto minMaxDepth8 = g_renderGraph->RegisterExternalResource(L"minMaxDepth8", &g_MinMaxDepth8, RenderGraph::RenderGraphResourceType::Texture);
+    //auto minMaxDepth16 = g_renderGraph->RegisterExternalResource(L"minMaxDepth16", &g_MinMaxDepth16, RenderGraph::RenderGraphResourceType::Texture);
+    //auto minMaxDepth32 = g_renderGraph->RegisterExternalResource(L"minMaxDepth32", &g_MinMaxDepth32, RenderGraph::RenderGraphResourceType::Texture);
+    //auto depthDownsize1 = g_renderGraph->RegisterExternalResource(L"depthDownsize1", &g_DepthDownsize1, RenderGraph::RenderGraphResourceType::Texture);
+    //auto depthDownsize2 = g_renderGraph->RegisterExternalResource(L"depthDownsize2", &g_DepthDownsize2, RenderGraph::RenderGraphResourceType::Texture);
+    //auto depthDownsize3 = g_renderGraph->RegisterExternalResource(L"depthDownsize3", &g_DepthDownsize3, RenderGraph::RenderGraphResourceType::Texture);
+    //auto depthDownsize4 = g_renderGraph->RegisterExternalResource(L"depthDownsize4", &g_DepthDownsize4, RenderGraph::RenderGraphResourceType::Texture);
+    //auto depthTiled1 = g_renderGraph->RegisterExternalResource(L"depthTiled1", &g_DepthTiled1, RenderGraph::RenderGraphResourceType::Texture);
+    //auto depthTiled2 = g_renderGraph->RegisterExternalResource(L"depthTiled2", &g_DepthTiled2, RenderGraph::RenderGraphResourceType::Texture);
+    //auto depthTiled3 = g_renderGraph->RegisterExternalResource(L"depthTiled3", &g_DepthTiled3, RenderGraph::RenderGraphResourceType::Texture);
+    //auto depthTiled4 = g_renderGraph->RegisterExternalResource(L"depthTiled4", &g_DepthTiled4, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoMerged1 = g_renderGraph->RegisterExternalResource(L"aoMerged1", &g_AOMerged1, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoMerged2 = g_renderGraph->RegisterExternalResource(L"aoMerged2", &g_AOMerged2, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoMerged3 = g_renderGraph->RegisterExternalResource(L"aoMerged3", &g_AOMerged3, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoMerged4 = g_renderGraph->RegisterExternalResource(L"aoMerged4", &g_AOMerged4, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoSmooth1 = g_renderGraph->RegisterExternalResource(L"aoSmooth1", &g_AOSmooth1, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoSmooth2 = g_renderGraph->RegisterExternalResource(L"aoSmooth2", &g_AOSmooth2, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoSmooth3 = g_renderGraph->RegisterExternalResource(L"aoSmooth4", &g_AOSmooth3, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoHighQuality1 = g_renderGraph->RegisterExternalResource(L"aoHighQuality1", &g_AOHighQuality1, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoHighQuality2 = g_renderGraph->RegisterExternalResource(L"aoHighQuality2", &g_AOHighQuality2, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoHighQuality3 = g_renderGraph->RegisterExternalResource(L"aoHighQuality3", &g_AOHighQuality3, RenderGraph::RenderGraphResourceType::Texture);
+    //auto aoHighQuality4 = g_renderGraph->RegisterExternalResource(L"aoHighQuality4", &g_AOHighQuality4, RenderGraph::RenderGraphResourceType::Texture);
+    //// -----
+    //auto dofTileClass1 = g_renderGraph->RegisterExternalResource(L"dofTileClass1", &g_DoFTileClass[0], RenderGraph::RenderGraphResourceType::Texture);
+    //auto dofTileClass2 = g_renderGraph->RegisterExternalResource(L"dofTileClass2", &g_DoFTileClass[1], RenderGraph::RenderGraphResourceType::Texture);
+    //auto dofPresortBuffer = g_renderGraph->RegisterExternalResource(L"dofPresortBuffer", &g_DoFPresortBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //auto dofPreFilter = g_renderGraph->RegisterExternalResource(L"dofPreFilter", &g_DoFPrefilter, RenderGraph::RenderGraphResourceType::Texture);
+    //auto dofBlurColor1 = g_renderGraph->RegisterExternalResource(L"dofBlurColor1", &g_DoFBlurColor[0], RenderGraph::RenderGraphResourceType::Texture);
+    //auto dofBlurColor2 = g_renderGraph->RegisterExternalResource(L"dofBlurColor2", &g_DoFBlurColor[1], RenderGraph::RenderGraphResourceType::Texture);
+    //auto dofBlurAlpha1 = g_renderGraph->RegisterExternalResource(L"dofBlurAlpha1", &g_DoFBlurAlpha[0], RenderGraph::RenderGraphResourceType::Texture);
+    //auto dofBlurAlpha2 = g_renderGraph->RegisterExternalResource(L"dofBlurAlpha2", &g_DoFBlurAlpha[1], RenderGraph::RenderGraphResourceType::Texture);
+    //auto dofWorkQueue = g_renderGraph->RegisterExternalResource(L"dofWorkQueue", &g_DoFWorkQueue, RenderGraph::RenderGraphResourceType::Texture);
+    //auto dofFastQueue = g_renderGraph->RegisterExternalResource(L"dofFastQueue", &g_DoFFastQueue, RenderGraph::RenderGraphResourceType::Texture);
+    //auto dofFixupQueue = g_renderGraph->RegisterExternalResource(L"dofFixupQueue", &g_DoFFixupQueue, RenderGraph::RenderGraphResourceType::Texture);
+    //// ----
+    //auto motionPrepBuffer = g_renderGraph->RegisterExternalResource(L"motionPrepBuffer", &g_MotionPrepBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //auto lumaBuffer = g_renderGraph->RegisterExternalResource(L"lumaBuffer", &g_LumaBuffer, RenderGraph::RenderGraphResourceType::Texture);
+    //auto temporalColor1 = g_renderGraph->RegisterExternalResource(L"temporalColor1", &g_TemporalColor[0], RenderGraph::RenderGraphResourceType::Texture);
+    //auto temporalColor2 = g_renderGraph->RegisterExternalResource(L"temporalColor2", &g_TemporalColor[1], RenderGraph::RenderGraphResourceType::Texture);
+    //auto temporalMinBound = g_renderGraph->RegisterExternalResource(L"temporalMinBound", &g_TemporalMinBound, RenderGraph::RenderGraphResourceType::Texture);
+    //auto temporalMaxBound = g_renderGraph->RegisterExternalResource(L"temporalMaxBound", &g_TemporalMaxBound, RenderGraph::RenderGraphResourceType::Texture);
+    //// add g_aBloomUAV
+    //auto lumaLR = g_renderGraph->RegisterExternalResource(L"lumaLR", &g_LumaLR, RenderGraph::RenderGraphResourceType::Texture);
+
+    //auto lightShadowPass = std::make_unique<SponzaPasses::LightShadowsPass>(g_renderGraph);
+    //lightShadowPass->ReadFrom({ sceneDepthBuffer, shadowBuffer });
+    //lightShadowPass->WriteTo({ &velocityBuffer });
 }
 
 void Sponza::RenderGraphStartup()
