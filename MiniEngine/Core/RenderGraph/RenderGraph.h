@@ -27,6 +27,8 @@ namespace RenderGraph
 
         std::size_t AddRenderPass(std::unique_ptr<RenderPass> renderPass);
 
+        ResourceEntry GetRegisteredResourceEntry(const std::wstring& name) const;
+
         /**
         * @brief checks if resource with given name already registered.
         * @param[in] name resource name in registry.
@@ -68,7 +70,7 @@ namespace RenderGraph
         * @returns resource entry describes resource in registry;
         */
         template<typename Ty>
-        ResourceEntry& RegisterExternalResource(const std::wstring& name, Ty* resource) {
+        ResourceEntry RegisterExternalResource(const std::wstring& name, Ty* resource) {
             return m_resourceRegistry.RegisterResource<Ty>(name, resource);
         }
 

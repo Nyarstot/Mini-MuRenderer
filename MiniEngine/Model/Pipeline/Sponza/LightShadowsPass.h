@@ -15,6 +15,8 @@ namespace SponzaPasses
     public:
         LightShadowsPass(RenderGraph::RenderGraph* renderGraph);
         ~LightShadowsPass() = default;
-
+        void foo() {
+            bool a = false;
+        }
     };
 }

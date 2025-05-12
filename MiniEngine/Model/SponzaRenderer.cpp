@@ -845,8 +845,13 @@ void Sponza::RenderGraphSetup()
         g_renderGraph = new RenderGraph::RenderGraph(L"Sponza Render Graph");
     }
 
-    //auto sceneColorBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"sceneColorBuffer", &g_SceneColorBuffer);
-    //auto shadowBuffer = g_renderGraph->RegisterExternalResource<ShadowBuffer>(L"shadowBuffer", &g_ShadowBuffer);
+    auto sceneColorBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"sceneColorBuffer", &g_SceneColorBuffer);
+    auto sceneNormalBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"sceneNormalBuffer", &g_SceneNormalBuffer);
+    auto shadowBuffer = g_renderGraph->RegisterExternalResource<ShadowBuffer>(L"shadowBuffer", &g_ShadowBuffer);
+
+    auto lightShadowPass = std::make_unique<SponzaPasses::LightShadowsPass>(g_renderGraph);
+    lightShadowPass->ReadFrom({sceneColorBuffer, shadowBuffer});
+    lightShadowPass->WriteTo({ &sceneNormalBuffer });
 
     //auto sceneColorBuffer = g_renderGraph->RegisterExternalResource(L"sceneDepthBuffer", &g_SceneDepthBuffer, RenderGraph::RenderGraphResourceType::Texture);
     //auto sceneDepthBuffer = g_renderGraph->RegisterExternalResource(L"sceneColorBuffer", &g_SceneColorBuffer, RenderGraph::RenderGraphResourceType::Texture);

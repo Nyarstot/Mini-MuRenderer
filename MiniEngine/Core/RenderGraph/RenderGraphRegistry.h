@@ -9,8 +9,8 @@ namespace RenderGraph
 {
     struct ResourceEntry
     {
-        RenderGraphCommonResourceType commonType;
-        RenderGraphResourceType type;
+        RenderGraphCommonResourceType commonType = RenderGraphCommonResourceType::Unknonw;
+        RenderGraphResourceType type = RenderGraphResourceType::Unknown;
         UINT64 sizeInBytes;
         std::size_t index;
         std::wstring name;
@@ -30,6 +30,9 @@ namespace RenderGraph
     protected:
         template<typename Ty>
         auto& GetResourceContainer() const {
+            // GetResourceContainer returns copy of the object for some reason
+            // So i wrap it in std::shared_ptr...
+
             if constexpr (std::is_same_v<Ty, DepthBuffer>) {
                 return m_depthBuffers;
             }
@@ -57,7 +60,7 @@ namespace RenderGraph
         ~RenderGraphRegistry() = default;
 
         template<typename Ty>
-        ResourceEntry& RegisterResource(const std::wstring& name, Ty* resource) {
+        ResourceEntry RegisterResource(const std::wstring& name, Ty* resource) {
             auto container = GetResourceContainer<Ty>();
             container->emplace_back(resource);
 
@@ -97,7 +100,7 @@ namespace RenderGraph
 
         bool IsResourceRegistered(const std::wstring& name) const;
 
-        ResourceEntry& GetRegisteredResourceEntry(const std::wstring& name) const;
+        ResourceEntry GetRegisteredResourceEntry(const std::wstring& name) const;
         UINT64 GetRegisteredResourceSize(const std::wstring& name) const;
 
     };

@@ -19,7 +19,7 @@ namespace RenderGraph
         return (it == m_resourceRegistry.end()) ? false : true;
     }
 
-    ResourceEntry& RenderGraphRegistry::GetRegisteredResourceEntry(const std::wstring& name) const
+    ResourceEntry RenderGraphRegistry::GetRegisteredResourceEntry(const std::wstring& name) const
     {
         if (IsResourceRegistered(name)) {
             ResourceEntry entry = m_resourceRegistry.at(name);

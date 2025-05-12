@@ -23,6 +23,11 @@ namespace RenderGraph
         return this->AddNode(std::move(renderPass));
     }
 
+    ResourceEntry RenderGraph::GetRegisteredResourceEntry(const std::wstring& name) const
+    {
+        return m_resourceRegistry.GetRegisteredResourceEntry(name);
+    }
+
     bool RenderGraph::IsResourceRegistered(const std::wstring& name) const
     {
         return m_resourceRegistry.IsResourceRegistered(name);

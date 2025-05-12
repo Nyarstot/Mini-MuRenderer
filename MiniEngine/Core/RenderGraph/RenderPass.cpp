@@ -52,11 +52,12 @@ namespace RenderGraph
         m_sharedFence = fence;
     }
 
-    RenderPass& RenderPass::ReadFrom(Span<const ResourceEntry> resources)
+    RenderPass& RenderPass::ReadFrom(Span<ResourceEntry> resources)
     {
         for (auto resource : resources) {
             //assert(resource.type == RenderGraphResourceType::Buffer || resource.type == RenderGraphResourceType::Texture);
-            m_reads.insert(resource);
+            std::wstring name = resource.name;
+            m_reads.insert({name, resource});
         }
 
         return *this;
@@ -67,9 +68,9 @@ namespace RenderGraph
         for (auto resource : resources) {
             if (resource) {
                 //assert(resource->type == RenderGraphResourceType::Buffer || resource->type == RenderGraphResourceType::Texture);
-                auto iter = m_reads.find(*resource);
+                auto iter = m_reads.find(resource->name);
                 if (iter == m_reads.end()) {
-                    m_writes.insert(*resource);
+                    m_writes.insert({resource->name, *resource});
                 }
             }
         }
