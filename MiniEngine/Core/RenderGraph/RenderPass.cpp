@@ -15,6 +15,30 @@ namespace RenderGraph
 
     }
 
+    ResourceEntry RenderPass::GetEntryFromReads(const std::wstring& name) const
+    {
+        auto it = m_reads.find(name);
+        if (it != m_reads.end()) {
+            auto entry = m_reads.at(name);
+            return entry;
+        }
+
+        // TODO: return NULL instead of throw error
+        throw std::runtime_error("No reads with given name");
+    }
+
+    ResourceEntry RenderPass::GetEntryFromWrites(const std::wstring& name) const
+    {
+        auto it = m_writes.find(name);
+        if (it != m_writes.end()) {
+            auto entry = m_writes.at(name);
+            return entry;
+        }
+
+        // TODO: return NULL instead of throw error
+        throw std::runtime_error("No reads with given name");
+    }
+
     void RenderPass::Execute(CommandContext& ctx)
     {
         if (!m_multiAdapterAllowed) {

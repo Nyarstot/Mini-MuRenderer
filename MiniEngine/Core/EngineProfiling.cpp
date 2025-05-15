@@ -422,7 +422,7 @@ bool NestedTimingTree::sm_CursorOnGraph = false;
 namespace EngineProfiling
 {
     BoolVar DrawFrameRate("Display Frame Rate", true);
-    BoolVar DrawProfiler("Display Profiler", false);
+    BoolVar DrawProfiler("Display Profiler", true);
     //BoolVar DrawPerfGraph("Display Performance Graph", false);
     const bool DrawPerfGraph = false;
     
@@ -455,7 +455,7 @@ namespace EngineProfiling
     {
         if (!DrawFrameRate)
             return;
-        
+
         float cpuTime = NestedTimingTree::GetTotalCpuTime();
         float gpuTime = NestedTimingTree::GetTotalGpuTime();
         float frameRate = 1.0f / NestedTimingTree::GetFrameDelta();

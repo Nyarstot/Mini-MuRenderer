@@ -74,9 +74,7 @@
     <ClInclude Include="ModelLoader.h" />
     <ClInclude Include="ModelH3D.h" />
     <ClInclude Include="ParticleEffects.h" />
-    <ClInclude Include="Pipeline\Sponza\LightShadowsPass.h" />
     <ClInclude Include="Renderer.h" />
-    <ClInclude Include="Pipeline\Sponza\DepthPass.h" />
     <ClInclude Include="SponzaRenderer.h" />
     <ClInclude Include="TextureConvert.h" />
   </ItemGroup>
@@ -93,9 +91,7 @@
     <ClCompile Include="ModelH3D.cpp" />
     <ClCompile Include="ModelLoader.cpp" />
     <ClCompile Include="ParticleEffects.cpp" />
-    <ClCompile Include="Pipeline\Sponza\LightShadowsPass.cpp" />
     <ClCompile Include="Renderer.cpp" />
-    <ClCompile Include="Pipeline\Sponza\DepthPass.cpp" />
     <ClCompile Include="SponzaRenderer.cpp" />
     <ClCompile Include="TextureConvert.cpp" />
   </ItemGroup>

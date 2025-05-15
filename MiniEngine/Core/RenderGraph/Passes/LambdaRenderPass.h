@@ -13,12 +13,19 @@ namespace RenderGraph
         LambdaRenderPass(const std::wstring& name, executeFunction execFunc);
         ~LambdaRenderPass() = default;
 
+        void InitSharedContext();
+
     protected:
         void InternalExecute(CommandContext& ctx) override;
         void InternalExecuteMultiAdapter(CommandContext& ctx) override;
 
     private:
         executeFunction m_executeFunction;
+
+        ComPtr<ID3D12GraphicsCommandList> m_sharedCommandList;
+        ComPtr<ID3D12CommandAllocator> m_sharedCommandAllocator;
+        ComPtr<ID3D12CommandQueue> m_sharedCommandQueues[2];
+        bool m_isSharedContextInit = false;
 
     };
 

@@ -29,7 +29,6 @@
 #include "SponzaRenderer.h"
 #include "Renderer.h"
 #include "Display.h"
-#include "RenderGraph/Base/Span.h"
 
 // From Model
 #include "ModelH3D.h"
@@ -46,12 +45,10 @@
 #include "../Core/RenderGraph/RenderPass.h"
 #include "../Core/RenderGraph/RenderGraphResource.h"
 #include "../Core/RenderGraph/Passes/LambdaRenderPass.h"
+#include "../Core/RenderGraph/Base/Span.h"
 
-// Render graph passes
-#include "Pipeline/Sponza/LightShadowsPass.h"
-
-//#include "../Core/MultiGPU/CrossAdapterResource.h"
 #include "../Core/MultiGPU/MultiAdapterManager.h"
+#include "../Core/MultiGPU/CopyEngine.h"
 
 using namespace Math;
 using namespace Graphics;
@@ -78,6 +75,8 @@ namespace Sponza
     // working with raw pointer and i'm ok with this.
     RenderGraph::RenderGraph* g_renderGraph;
     RenderGraph::RenderGraphStoraged* g_renderGraphStoraged;
+    MultiGPU::SharedResource m_sharedShadowBuffer;
+
     bool g_useMultiGPU = false;
 
     Vector3 m_SunDirection;
@@ -452,7 +451,6 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
         g_renderGraph->Clear();
     }
 
-    //g_renderGraph->RegisterExistingResource(&g_ShadowBuffer);
 
     // Define render passes using lambdas that capture the needed context
     auto shadowPass = [&](ID3D12GraphicsCommandList* cmdList) {
@@ -493,6 +491,8 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
 
     auto depthPrePass = [&](ID3D12GraphicsCommandList* cmdList) {
         ScopedTimer _prof(L"Z PrePass", gfxContext);
+
+        //MultiGPU::CopyEngine::CopyResource(m_sharedShadowBuffer, g_SceneDepthBuffer);
 
         gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
         gfxContext.ClearDepth(g_SceneDepthBuffer);
@@ -594,8 +594,9 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
     auto depthPrePassNode   = std::make_unique<RenderGraph::LambdaRenderPass>(L"DepthPrePass", depthPrePass);
     auto mainRenderPassNode = std::make_unique<RenderGraph::LambdaRenderPass>(L"MainRenderPass", mainRenderPass);
 
-    //shadowPassNode->SetMultiAdapterAllowed(true, 1);
-    //shadowPassNode->AddDependentAdapter(1);
+    depthPrePassNode ->SetMultiAdapterAllowed(true, 1);
+    depthPrePassNode->AddDependentAdapter(1);
+    depthPrePassNode->InitSharedContext();
 
     // -------- Add render passes to graph
 
@@ -845,13 +846,17 @@ void Sponza::RenderGraphSetup()
         g_renderGraph = new RenderGraph::RenderGraph(L"Sponza Render Graph");
     }
 
+    MultiGPU::CopyEngine::Initialize(Graphics::g_multiAdapterManager);
+
     auto sceneColorBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"sceneColorBuffer", &g_SceneColorBuffer);
     auto sceneNormalBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"sceneNormalBuffer", &g_SceneNormalBuffer);
     auto shadowBuffer = g_renderGraph->RegisterExternalResource<ShadowBuffer>(L"shadowBuffer", &g_ShadowBuffer);
 
-    auto lightShadowPass = std::make_unique<SponzaPasses::LightShadowsPass>(g_renderGraph);
-    lightShadowPass->ReadFrom({sceneColorBuffer, shadowBuffer});
-    lightShadowPass->WriteTo({ &sceneNormalBuffer });
+    D3D12_RESOURCE_DESC shadowBufferDesc = g_ShadowBuffer.GetResource()->GetDesc();
+    m_sharedShadowBuffer.Create(
+        L"sharedShadowBuffer",
+        shadowBufferDesc
+    );
 
     //auto sceneColorBuffer = g_renderGraph->RegisterExternalResource(L"sceneDepthBuffer", &g_SceneDepthBuffer, RenderGraph::RenderGraphResourceType::Texture);
     //auto sceneDepthBuffer = g_renderGraph->RegisterExternalResource(L"sceneColorBuffer", &g_SceneColorBuffer, RenderGraph::RenderGraphResourceType::Texture);

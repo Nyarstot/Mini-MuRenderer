@@ -16,7 +16,7 @@ namespace RenderGraph
 
     protected:
         RenderGraph* m_renderGraph;
-        std::unordered_map<std::wstring, ResourceEntry> m_readWrites;
+        //std::unordered_map<std::wstring, ResourceEntry> m_readWrites;
         std::unordered_map<std::wstring, ResourceEntry> m_reads;
         std::unordered_map<std::wstring, ResourceEntry> m_writes;
 
@@ -30,6 +30,9 @@ namespace RenderGraph
         virtual void InternalExecute(CommandContext& ctx) = 0;
         virtual void InternalExecuteMultiAdapter(CommandContext& ctx) = 0;
         virtual void Setup(const GraphicsContext& ctx);
+
+        ResourceEntry GetEntryFromReads(const std::wstring& name) const;
+        ResourceEntry GetEntryFromWrites(const std::wstring& name) const;
 
     public:
         virtual ~RenderPass() = default;

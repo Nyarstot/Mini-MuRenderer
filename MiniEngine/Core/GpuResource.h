@@ -13,11 +13,17 @@
 
 #pragma once
 
+namespace MultiGPU
+{
+    class CrossAdapterCopyEngine;
+}
+
 class GpuResource
 {
     friend class CommandContext;
     friend class GraphicsContext;
     friend class ComputeContext;
+    friend class MultiGPU::CrossAdapterCopyEngine;
 
 public:
     GpuResource() : 

@@ -44,8 +44,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ImGuiRenderer.cpp" />
-    <ClCompile Include="Pipeline\Sponza\DepthPass.cpp" />
-    <ClCompile Include="Pipeline\Sponza\LightShadowsPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Source Files">
@@ -96,8 +94,6 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="ImGuiRenderer.h" />
-    <ClInclude Include="Pipeline\Sponza\DepthPass.h" />
-    <ClInclude Include="Pipeline\Sponza\LightShadowsPass.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Common.hlsli">

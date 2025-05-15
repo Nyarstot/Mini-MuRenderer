@@ -106,8 +106,9 @@
     <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="MotionBlur.h" />
-    <ClInclude Include="MultiGPU\CrossAdapterCopyEngine.h" />
+    <ClInclude Include="MultiGPU\CopyEngine.h" />
     <ClInclude Include="MultiGPU\MultiAdapterManager.h" />
+    <ClInclude Include="MultiGPU\SharedResource.h" />
     <ClInclude Include="ParticleEffect.h" />
     <ClInclude Include="ParticleEffectManager.h" />
     <ClInclude Include="ParticleEffectProperties.h" />
@@ -121,7 +122,6 @@
     <ClInclude Include="ReadbackBuffer.h" />
     <ClInclude Include="RenderGraph\Base\BaseGraph.h" />
     <ClInclude Include="RenderGraph\Base\Span.h" />
-    <ClInclude Include="RenderGraph\MultiGPU\RGCrossAdapterResource.h" />
     <ClInclude Include="RenderGraph\Passes\LambdaRenderPass.h" />
     <ClInclude Include="RenderGraph\RenderGraph.h" />
     <ClInclude Include="RenderGraph\RenderGraphRegistry.h" />
@@ -179,8 +179,9 @@
     <ClCompile Include="Math\Frustum.cpp" />
     <ClCompile Include="Math\Random.cpp" />
     <ClCompile Include="MotionBlur.cpp" />
-    <ClCompile Include="MultiGPU\CrossAdapterCopyEngine.cpp" />
+    <ClCompile Include="MultiGPU\CopyEngine.cpp" />
     <ClCompile Include="MultiGPU\MultiAdapterManager.cpp" />
+    <ClCompile Include="MultiGPU\SharedResource.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
     <ClCompile Include="ParticleEffectManager.cpp" />
     <ClCompile Include="ParticleEmissionProperties.cpp" />
@@ -192,7 +193,6 @@
     <ClCompile Include="PostEffects.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="ReadbackBuffer.cpp" />
-    <ClCompile Include="RenderGraph\MultiGPU\RGCrossAdapterResource.cpp" />
     <ClCompile Include="RenderGraph\Passes\LambdaRenderPass.cpp" />
     <ClCompile Include="RenderGraph\RenderGraph.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphRegistry.cpp" />

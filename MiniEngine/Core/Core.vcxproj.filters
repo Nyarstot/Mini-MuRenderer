@@ -516,9 +516,9 @@
     <ClCompile Include="Util\StringUtils.cpp" />
     <ClCompile Include="MultiGPU\MultiAdapterManager.cpp" />
     <ClCompile Include="RenderGraph\Utils\RenderGraphUtils.cpp" />
-    <ClCompile Include="MultiGPU\CrossAdapterCopyEngine.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphRegistry.cpp" />
-    <ClCompile Include="RenderGraph\MultiGPU\RGCrossAdapterResource.cpp" />
+    <ClCompile Include="MultiGPU\SharedResource.cpp" />
+    <ClCompile Include="MultiGPU\CopyEngine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BitonicSort.h" />
@@ -602,10 +602,10 @@
     <ClInclude Include="json.hpp" />
     <ClInclude Include="Util\StringUtils.h" />
     <ClInclude Include="RenderGraph\Utils\RenderGraphUtils.h" />
-    <ClInclude Include="MultiGPU\CrossAdapterCopyEngine.h" />
     <ClInclude Include="RenderGraph\RenderGraphRegistry.h" />
     <ClInclude Include="RenderGraph\Base\Span.h" />
-    <ClInclude Include="RenderGraph\MultiGPU\RGCrossAdapterResource.h" />
+    <ClInclude Include="MultiGPU\SharedResource.h" />
+    <ClInclude Include="MultiGPU\CopyEngine.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl" />

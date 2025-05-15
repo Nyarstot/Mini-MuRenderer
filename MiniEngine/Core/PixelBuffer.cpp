@@ -360,7 +360,7 @@ void PixelBuffer::CreateTextureResource( ID3D12Device* Device, const std::wstrin
     Destroy();
 
     (void)VidMemPtr;
-    
+
     {
         CD3DX12_HEAP_PROPERTIES HeapProps(D3D12_HEAP_TYPE_DEFAULT);
         ASSERT_SUCCEEDED( Device->CreateCommittedResource( &HeapProps, D3D12_HEAP_FLAG_NONE,
