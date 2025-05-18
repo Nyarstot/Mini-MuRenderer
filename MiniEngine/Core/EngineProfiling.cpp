@@ -23,6 +23,8 @@
 #include <unordered_map>
 #include <array>
 
+#include "Util/PerformanceLogger.h"
+
 using namespace Graphics;
 using namespace GraphRenderer;
 using namespace Math;
@@ -31,6 +33,7 @@ using namespace std;
 #define PERF_GRAPH_ERROR uint32_t(0xFFFFFFFF)
 namespace EngineProfiling
 {
+    Util::PerformanceLogger g_performanceLogger;
     bool Paused = false;
 }
 
@@ -459,6 +462,8 @@ namespace EngineProfiling
         float cpuTime = NestedTimingTree::GetTotalCpuTime();
         float gpuTime = NestedTimingTree::GetTotalGpuTime();
         float frameRate = 1.0f / NestedTimingTree::GetFrameDelta();
+
+        Util::PerformanceLogger::WriteImmediate(cpuTime, gpuTime, frameRate);
 
         Text.DrawFormattedString( "CPU %7.3f ms, GPU %7.3f ms, %3u Hz\n",
             cpuTime, gpuTime, (uint32_t)(frameRate + 0.5f));

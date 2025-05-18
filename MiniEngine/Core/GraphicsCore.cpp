@@ -53,6 +53,8 @@ namespace Graphics
     ID3D12Device* g_SecondaryDevice = nullptr;
 
     MultiGPU::MultiAdapterManager g_multiAdapterManager;
+    MultiGPU::SecondaryDeviceContext g_secondaryDeviceContext;
+
     CommandListManager g_CommandManager;
     ContextManager g_ContextManager;
 
@@ -235,7 +237,10 @@ void Graphics::Initialize(bool RequireDXRSupport)
     CommandLineArgs::GetInteger(L"warp", bUseWarpDriver);
 
     // Get primary vendor
-    uint32_t desiredVendor = GetDesiredGPUVendor();
+    // vendorID_Nvidia
+    // 
+
+    uint32_t desiredVendor = vendorID_Nvidia;
     uint32_t secondaryVendor = vendorID_Intel;
 
     if (desiredVendor)
@@ -360,7 +365,6 @@ void Graphics::Initialize(bool RequireDXRSupport)
 
     g_multiAdapterManager.AppendDevice(g_Device, pAdapter.Get());
     g_multiAdapterManager.AppendDevice(g_SecondaryDevice, pSecondaryAdapter.Get());
-    g_multiAdapterManager.CreateSharedFence();
 
 #if _DEBUG
     ID3D12InfoQueue* pInfoQueue = nullptr;
@@ -449,6 +453,9 @@ void Graphics::Initialize(bool RequireDXRSupport)
 
     // Common state was moved to GraphicsCommon.*
     InitializeCommonState();
+    g_secondaryDeviceContext.Create(g_SecondaryDevice);
+    g_multiAdapterManager.CreateSharedFence();
+    Util::PerformanceLogger::Initialize("performance_log.csv");
 
     Display::Initialize();
 

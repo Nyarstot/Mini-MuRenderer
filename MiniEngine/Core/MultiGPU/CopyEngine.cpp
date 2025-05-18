@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "MultiGPU/CopyEngine.h"
-
+#include "GraphicsCore.h"
 
 
 namespace MultiGPU

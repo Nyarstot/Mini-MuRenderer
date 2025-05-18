@@ -108,6 +108,8 @@
     <ClInclude Include="MotionBlur.h" />
     <ClInclude Include="MultiGPU\CopyEngine.h" />
     <ClInclude Include="MultiGPU\MultiAdapterManager.h" />
+    <ClInclude Include="Util\PerformanceLogger.h" />
+    <ClInclude Include="MultiGPU\SecondaryDeviceContext.h" />
     <ClInclude Include="MultiGPU\SharedResource.h" />
     <ClInclude Include="ParticleEffect.h" />
     <ClInclude Include="ParticleEffectManager.h" />
@@ -181,6 +183,7 @@
     <ClCompile Include="MotionBlur.cpp" />
     <ClCompile Include="MultiGPU\CopyEngine.cpp" />
     <ClCompile Include="MultiGPU\MultiAdapterManager.cpp" />
+    <ClCompile Include="MultiGPU\SecondaryDeviceContext.cpp" />
     <ClCompile Include="MultiGPU\SharedResource.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
     <ClCompile Include="ParticleEffectManager.cpp" />
@@ -213,6 +216,7 @@
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="Util\CommandLineArg.cpp" />
     <ClCompile Include="Util\D3D12Utils.cpp" />
+    <ClCompile Include="Util\PerformanceLogger.cpp" />
     <ClCompile Include="Util\StringUtils.cpp" />
   </ItemGroup>
   <ItemGroup>

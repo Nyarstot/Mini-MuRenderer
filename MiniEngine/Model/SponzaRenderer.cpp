@@ -464,6 +464,7 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
             static_cast<std::uint32_t>(g_ShadowBuffer.GetHeight()),
             16);
 
+        MultiGPU::CopyEngine::CopyResource(m_sharedShadowBuffer, g_ShadowBuffer);
         g_ShadowBuffer.BeginRendering(gfxContext);
 
         // ----- Shadow PSO
@@ -491,8 +492,6 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
 
     auto depthPrePass = [&](ID3D12GraphicsCommandList* cmdList) {
         ScopedTimer _prof(L"Z PrePass", gfxContext);
-
-        //MultiGPU::CopyEngine::CopyResource(m_sharedShadowBuffer, g_SceneDepthBuffer);
 
         gfxContext.TransitionResource(g_SceneDepthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE, true);
         gfxContext.ClearDepth(g_SceneDepthBuffer);
@@ -594,9 +593,9 @@ void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Cam
     auto depthPrePassNode   = std::make_unique<RenderGraph::LambdaRenderPass>(L"DepthPrePass", depthPrePass);
     auto mainRenderPassNode = std::make_unique<RenderGraph::LambdaRenderPass>(L"MainRenderPass", mainRenderPass);
 
-    depthPrePassNode ->SetMultiAdapterAllowed(true, 1);
-    depthPrePassNode->AddDependentAdapter(1);
-    depthPrePassNode->InitSharedContext();
+    shadowPassNode->SetMultiAdapterAllowed(true, 1);
+    shadowPassNode->AddDependentAdapter(1);
+    shadowPassNode->InitSharedContext();
 
     // -------- Add render passes to graph
 
@@ -850,13 +849,31 @@ void Sponza::RenderGraphSetup()
 
     auto sceneColorBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"sceneColorBuffer", &g_SceneColorBuffer);
     auto sceneNormalBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"sceneNormalBuffer", &g_SceneNormalBuffer);
+    auto sceneDepthBuffer = g_renderGraph->RegisterExternalResource<DepthBuffer>(L"sceneDepthBuffer", &g_SceneDepthBuffer);
+    auto postEffectBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"postEffectBuffer", &g_PostEffectsBuffer);
+    auto velocityBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"velocityBuffer", &g_VelocityBuffer);
+    auto overlayBuffer = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"horizontalBuffer", &g_HorizontalBuffer);
     auto shadowBuffer = g_renderGraph->RegisterExternalResource<ShadowBuffer>(L"shadowBuffer", &g_ShadowBuffer);
+    auto ssaoFillScreen = g_renderGraph->RegisterExternalResource<ColorBuffer>(L"ssaoFullScreen", &g_SSAOFullScreen);
 
     D3D12_RESOURCE_DESC shadowBufferDesc = g_ShadowBuffer.GetResource()->GetDesc();
     m_sharedShadowBuffer.Create(
         L"sharedShadowBuffer",
         shadowBufferDesc
     );
+
+    //auto shadowPassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"ShadowPass", &Sponza::ShadowPass);
+    //auto depthPrePassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"DepthPrePass", &Sponza::DepthPrePass);
+    //auto mainRenderPassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"MainRenderPass", &Sponza::MainRenderPass);
+    //auto ssaoPassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"SSAOPass", &Sponza::SSAOPass);
+    //auto lightGridPassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"LightGridPass", &Sponza::LightGridPass);
+    //auto lightShadowPassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"LightShadowPass", &Sponza::LightShadowPass);
+    //auto taaResolvePassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"TAAResolvePass", &Sponza::ResolveTAA);
+    //auto velocityPassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"VelocityGatherPass", &Sponza::GenerateCameraVelocityBuffer);
+    //auto motionBlurPassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"MotionBlurPass", &Sponza::RenderBlur);
+    //auto depthOfFieldPassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"DepthOfFieldPass", &Sponza::RenderDOF);
+    //auto particleRenderPassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"ParticleRenderPass", &Sponza::RenderParticles);
+    //auto particleUpdatePassNode = std::make_unique<RenderGraph::LambdaContextRenderPass>(L"ParticleUpdatePass", &Sponza::RecalculateParticles);
 
     //auto sceneColorBuffer = g_renderGraph->RegisterExternalResource(L"sceneDepthBuffer", &g_SceneDepthBuffer, RenderGraph::RenderGraphResourceType::Texture);
     //auto sceneDepthBuffer = g_renderGraph->RegisterExternalResource(L"sceneColorBuffer", &g_SceneColorBuffer, RenderGraph::RenderGraphResourceType::Texture);

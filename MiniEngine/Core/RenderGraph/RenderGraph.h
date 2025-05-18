@@ -10,6 +10,11 @@
 
 namespace RenderGraph
 {
+    struct RenderPassEntry
+    {
+
+    };
+
     /**
     * @class RenderGraph RenderGraph.h "Core/RenderGraph/RenderGraph.h"
     * @brief general render graph representation class.
@@ -18,6 +23,7 @@ namespace RenderGraph
     {
     private:
         RenderGraphRegistry m_resourceRegistry;
+        std::unordered_map<std::wstring, std::unique_ptr<RenderPass>> m_passesRegistry;
         std::unordered_map<std::wstring, std::shared_ptr<RenderGraphResource>> m_resources;
         ComPtr<ID3D12Fence> m_sharedFence;
         UINT64 m_fenceValue = 1;
@@ -25,6 +31,8 @@ namespace RenderGraph
     public:
         RenderGraph(const std::wstring& name = L"");
 
+        void RegisterRenderPass(std::unique_ptr<RenderPass> renderPass);
+        std::size_t AddRenderPass(const std::wstring& name);
         std::size_t AddRenderPass(std::unique_ptr<RenderPass> renderPass);
 
         ResourceEntry GetRegisteredResourceEntry(const std::wstring& name) const;

@@ -17,6 +17,21 @@ namespace RenderGraph
         this->SetTitle(name);
     }
 
+    void RenderGraph::RegisterRenderPass(std::unique_ptr<RenderPass> renderPass)
+    {
+        auto& name = renderPass->GetName();
+        m_passesRegistry.insert({ name, std::move(renderPass) });
+    }
+
+    std::size_t RenderGraph::AddRenderPass(const std::wstring& name)
+    {
+        auto& it = m_passesRegistry.find(name);
+        if (it != m_passesRegistry.end()) {
+            auto& renderPass = m_passesRegistry.at(name);
+            return this->AddNode(std::move(renderPass));
+        }
+    }
+
     std::size_t RenderGraph::AddRenderPass(std::unique_ptr<RenderPass> renderPass)
     {
         return this->AddNode(std::move(renderPass));

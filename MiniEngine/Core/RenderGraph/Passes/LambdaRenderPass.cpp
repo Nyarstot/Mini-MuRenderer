@@ -3,11 +3,13 @@
 #include "RenderGraph/RenderGraph.h"
 
 #include "MultiGPU/CopyEngine.h"
+#include "MultiGPU/SecondaryDeviceContext.h"
 
 #include "GraphicsCore.h"
 #include "CommandListManager.h"
 
 
+using namespace MultiGPU;
 namespace RenderGraph
 {
     LambdaRenderPass::LambdaRenderPass(const std::wstring& name, executeFunction execFunc)
@@ -47,9 +49,11 @@ namespace RenderGraph
 
     void LambdaRenderPass::InternalExecuteMultiAdapter(CommandContext& ctx)
     {
-        UINT64 fenceValue = 1;
-        for (std::size_t depAdapter : this->m_dependentAdapters) {
-            m_sharedCommandQueues[depAdapter]->Wait(this->m_sharedFence.Get(), fenceValue - 1);
+        auto& secondaryDeviceContext = Graphics::g_secondaryDeviceContext;
+        auto& commandManager = Graphics::g_CommandManager;
+
+        {
+            //commandManager.GetGraphicsQueue().IncrementFence
         }
 
         {
@@ -57,20 +61,14 @@ namespace RenderGraph
             MultiGPU::CopyEngine::GetCopyQueue()->ExecuteCommandLists(_countof(ppCopyCommandList), ppCopyCommandList);
         }
 
-        m_sharedCommandList->Reset(m_sharedCommandAllocator.Get(), nullptr);
-        m_executeFunction(ctx.GetCommandList());
-        m_sharedCommandList->Close();
+        {
+            secondaryDeviceContext.GetDirectCommandList()->Reset(secondaryDeviceContext.GetDirectCommandAllocator(), nullptr);
+            m_executeFunction(ctx.GetCommandList());
+            secondaryDeviceContext.GetDirectCommandList()->Close();
 
-        ID3D12CommandList* ppCommandLists[] = { m_sharedCommandList.Get() };
-        m_sharedCommandQueues[this->m_execAdapterIndex]->ExecuteCommandLists(1, ppCommandLists);
-        m_sharedCommandQueues[this->m_execAdapterIndex]->Signal(this->m_sharedFence.Get(), fenceValue);
-        fenceValue++;
-
-        for (std::size_t i = 0; i < Graphics::g_multiAdapterManager.GetDeviceCount(); i++) {
-            m_sharedCommandQueues[i]->Signal(this->m_sharedFence.Get(), fenceValue);
-            this->m_sharedFence->SetEventOnCompletion(fenceValue, nullptr);
+            ID3D12CommandList* ppCommandLists[] = { secondaryDeviceContext.GetDirectCommandList() };
+            secondaryDeviceContext.GetDirectCommandQueue()->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
         }
-        fenceValue++;
     }
 
     LambdaContextRenderPass::LambdaContextRenderPass(const std::wstring& name, executeContextFunction execFunc)

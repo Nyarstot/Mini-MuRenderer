@@ -19,6 +19,8 @@
 #include "GraphicsCommon.h"
 
 #include "MultiGPU/MultiAdapterManager.h"
+#include "MultiGPU/SecondaryDeviceContext.h"
+#include "Util/PerformanceLogger.h"
 
 class CommandListManager;
 class ContextManager;
@@ -40,7 +42,9 @@ namespace Graphics
 
     extern ID3D12Device* g_Device;
     extern ID3D12Device* g_SecondaryDevice;
+
     extern MultiGPU::MultiAdapterManager g_multiAdapterManager;
+    extern MultiGPU::SecondaryDeviceContext g_secondaryDeviceContext;
 
     extern CommandListManager g_CommandManager;
     extern ContextManager g_ContextManager;
