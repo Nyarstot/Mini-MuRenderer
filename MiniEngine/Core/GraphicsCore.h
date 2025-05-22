@@ -29,15 +29,20 @@ namespace Graphics
 
     using namespace Microsoft::WRL;
 
-    void Initialize(bool RequireDXRSupport=false);
+    void Initialize(bool RequireDXRSupport=false, bool RequireEMASupport=true);
     void Shutdown(void);
+
+    void SetDebugInfoQueue(ID3D12Device* pDevice);
 
     bool IsDeviceNvidia(ID3D12Device* pDevice);
     bool IsDeviceAMD(ID3D12Device* pDevice);
     bool IsDeviceIntel(ID3D12Device* pDevice);
 
     extern ID3D12Device* g_Device;
+    extern ID3D12Device* g_SecondaryDevice;
+
     extern CommandListManager g_CommandManager;
+    extern CommandListManager g_SecondaryCommandManager;
     extern ContextManager g_ContextManager;
 
     extern D3D_FEATURE_LEVEL g_D3DFeatureLevel;

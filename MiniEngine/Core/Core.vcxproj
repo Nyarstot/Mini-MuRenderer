@@ -105,6 +105,8 @@
     <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="MotionBlur.h" />
+    <ClInclude Include="MultiGPU\DeviceBenchmark.h" />
+    <ClInclude Include="MultiGPU\SharedResource.h" />
     <ClInclude Include="ParticleEffect.h" />
     <ClInclude Include="ParticleEffectManager.h" />
     <ClInclude Include="ParticleEffectProperties.h" />
@@ -116,6 +118,12 @@
     <ClInclude Include="EngineTuning.h" />
     <ClInclude Include="Display.h" />
     <ClInclude Include="ReadbackBuffer.h" />
+    <ClInclude Include="RenderGraph\Base\BaseGraph.h" />
+    <ClInclude Include="RenderGraph\Base\Span.h" />
+    <ClInclude Include="RenderGraph\RenderGraph.h" />
+    <ClInclude Include="RenderGraph\RenderGraphRegistry.h" />
+    <ClInclude Include="RenderGraph\RenderGraphResource.h" />
+    <ClInclude Include="RenderGraph\RenderPass.h" />
     <ClInclude Include="RootSignature.h" />
     <ClInclude Include="SamplerManager.h" />
     <ClInclude Include="ShadowBuffer.h" />
@@ -129,6 +137,7 @@
     <ClInclude Include="UploadBuffer.h" />
     <ClInclude Include="Utility.h" />
     <ClInclude Include="Util\CommandLineArg.h" />
+    <ClInclude Include="Util\D3D12Utils.h" />
     <ClInclude Include="VectorMath.h" />
   </ItemGroup>
   <ItemGroup>
@@ -165,6 +174,8 @@
     <ClCompile Include="Math\Frustum.cpp" />
     <ClCompile Include="Math\Random.cpp" />
     <ClCompile Include="MotionBlur.cpp" />
+    <ClCompile Include="MultiGPU\DeviceBenchmark.cpp" />
+    <ClCompile Include="MultiGPU\SharedResource.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
     <ClCompile Include="ParticleEffectManager.cpp" />
     <ClCompile Include="ParticleEmissionProperties.cpp" />
@@ -176,6 +187,10 @@
     <ClCompile Include="PostEffects.cpp" />
     <ClCompile Include="Display.cpp" />
     <ClCompile Include="ReadbackBuffer.cpp" />
+    <ClCompile Include="RenderGraph\Base\BaseGraph.cpp" />
+    <ClCompile Include="RenderGraph\Base\Span.cpp" />
+    <ClCompile Include="RenderGraph\RenderGraphRegistry.cpp" />
+    <ClCompile Include="RenderGraph\RenderGraphResource.cpp" />
     <ClCompile Include="RootSignature.cpp" />
     <ClCompile Include="SamplerManager.cpp" />
     <ClCompile Include="ShadowBuffer.cpp" />
@@ -189,6 +204,7 @@
     <ClCompile Include="UploadBuffer.cpp" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="Util\CommandLineArg.cpp" />
+    <ClCompile Include="Util\D3D12Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\AdaptExposureCS.hlsl" />
@@ -361,6 +377,14 @@
     </FxCompile>
     <FxCompile Include="Shaders\PerfGraphVS.hlsl">
       <ShaderType>Vertex</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shaders\PerformanceComputeShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.2</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
     </FxCompile>
     <FxCompile Include="Shaders\PresentHDRPS.hlsl">
       <ShaderType>Pixel</ShaderType>

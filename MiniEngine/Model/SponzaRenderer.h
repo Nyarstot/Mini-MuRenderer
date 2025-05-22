@@ -15,6 +15,8 @@
 
 #include <d3d12.h>
 
+#include "../Core/MultiGPU/SharedResource.h"
+
 class GraphicsContext;
 class ShadowCamera;
 class ModelH3D;
@@ -28,7 +30,7 @@ namespace Math
 
 namespace Sponza
 {
-    void Startup( Math::Camera& camera );
+    void Startup( Math::Camera& camera);
     void Cleanup( void );
 
     void RenderScene(
@@ -38,6 +40,22 @@ namespace Sponza
         const D3D12_RECT& scissor,
         bool skipDiffusePass = false,
         bool skipShadowMap = false );
+
+    /////////////////
+    // Render Graph
+    ////////////////
+
+    void RenderGraphStartup(Math::Camera& camera, bool useEMA = false);
+
+    void RenderSceneRenderGraph(
+        GraphicsContext& gfxContext,
+        const Math::Camera& camera,
+        const D3D12_VIEWPORT& viewport,
+        const D3D12_RECT& scissors,
+        bool skipDiffusePass = false,
+        bool skipShadowMap = false,
+        bool useEMA = false
+    );
 
     const ModelH3D& GetModel();
 

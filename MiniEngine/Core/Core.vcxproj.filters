@@ -451,6 +451,7 @@
     <FxCompile Include="Shaders\PresentSDRPS.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\PerformanceComputeShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BitonicSort.cpp" />
@@ -508,6 +509,13 @@
     <ClCompile Include="UploadBuffer.cpp" />
     <ClCompile Include="Utility.cpp" />
     <ClCompile Include="Util\CommandLineArg.cpp" />
+    <ClCompile Include="MultiGPU\SharedResource.cpp" />
+    <ClCompile Include="Util\D3D12Utils.cpp" />
+    <ClCompile Include="RenderGraph\Base\BaseGraph.cpp" />
+    <ClCompile Include="RenderGraph\Base\Span.cpp" />
+    <ClCompile Include="RenderGraph\RenderGraphRegistry.cpp" />
+    <ClCompile Include="RenderGraph\RenderGraphResource.cpp" />
+    <ClCompile Include="MultiGPU\DeviceBenchmark.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BitonicSort.h" />
@@ -581,6 +589,15 @@
     <ClInclude Include="Utility.h" />
     <ClInclude Include="Util\CommandLineArg.h" />
     <ClInclude Include="VectorMath.h" />
+    <ClInclude Include="MultiGPU\SharedResource.h" />
+    <ClInclude Include="Util\D3D12Utils.h" />
+    <ClInclude Include="RenderGraph\Base\BaseGraph.h" />
+    <ClInclude Include="RenderGraph\Base\Span.h" />
+    <ClInclude Include="RenderGraph\RenderGraph.h" />
+    <ClInclude Include="RenderGraph\RenderPass.h" />
+    <ClInclude Include="RenderGraph\RenderGraphRegistry.h" />
+    <ClInclude Include="RenderGraph\RenderGraphResource.h" />
+    <ClInclude Include="MultiGPU\DeviceBenchmark.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Math\Functions.inl" />

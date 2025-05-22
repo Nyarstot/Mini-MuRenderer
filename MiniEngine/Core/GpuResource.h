@@ -44,6 +44,12 @@ public:
         ++m_VersionID;
     }
 
+    void SetInitialState(const D3D12_RESOURCE_STATES& InitialState, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_NULL)
+    {
+        m_UsageState = InitialState;
+        m_GpuVirtualAddress = VidMemPtr;
+    }
+
     ID3D12Resource* operator->() { return m_pResource.Get(); } 
     const ID3D12Resource* operator->() const { return m_pResource.Get(); }
 
@@ -57,6 +63,7 @@ public:
     uint32_t GetVersionID() const { return m_VersionID; }
 
 protected:
+
 
     Microsoft::WRL::ComPtr<ID3D12Resource> m_pResource;
     D3D12_RESOURCE_STATES m_UsageState;

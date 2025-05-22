@@ -50,7 +50,11 @@ namespace Graphics
     bool g_bTypedUAVLoadSupport_R16G16B16A16_FLOAT = false;
 
     ID3D12Device* g_Device = nullptr;
+    ID3D12Device* g_SecondaryDevice = nullptr;
+
     CommandListManager g_CommandManager;
+    CommandListManager g_SecondaryCommandManager;
+
     ContextManager g_ContextManager;
 
     D3D_FEATURE_LEVEL g_D3DFeatureLevel = D3D_FEATURE_LEVEL_11_0;
@@ -161,9 +165,10 @@ namespace Graphics
 }
 
 // Initialize the DirectX resources required to run.
-void Graphics::Initialize(bool RequireDXRSupport)
+void Graphics::Initialize(bool RequireDXRSupport, bool RequireEMASupport)
 {
     Microsoft::WRL::ComPtr<ID3D12Device> pDevice;
+    Microsoft::WRL::ComPtr<ID3D12Device> pSecondaryDevice;
 
     uint32_t useDebugLayers = 0;
     CommandLineArgs::GetInteger(L"debug", useDebugLayers);
@@ -224,11 +229,13 @@ void Graphics::Initialize(bool RequireDXRSupport)
 
     // Create the D3D graphics device
     Microsoft::WRL::ComPtr<IDXGIAdapter1> pAdapter;
+    Microsoft::WRL::ComPtr<IDXGIAdapter1> pSecondaryAdapter;
 
     uint32_t bUseWarpDriver = false;
     CommandLineArgs::GetInteger(L"warp", bUseWarpDriver);
 
-    uint32_t desiredVendor = GetDesiredGPUVendor();
+    std::uint32_t desiredVendor = GetDesiredGPUVendor();
+    std::uint32_t secondaryDesiredVendor = vendorID_Intel;
 
     if (desiredVendor)
     {
@@ -276,6 +283,34 @@ void Graphics::Initialize(bool RequireDXRSupport)
 
             Utility::Printf(L"Selected GPU:  %s (%u MB)\n", desc.Description, desc.DedicatedVideoMemory >> 20);
         }
+
+        if (RequireEMASupport) {
+            Utility::Printf(L"Looking for a secondary %s GPU\n", GPUVendorToString(secondaryDesiredVendor));
+
+            for (std::uint32_t Idx = 0; DXGI_ERROR_NOT_FOUND != dxgiFactory->EnumAdapters1(Idx, &pSecondaryAdapter); ++Idx)
+            {
+                DXGI_ADAPTER_DESC1 desc;
+                pSecondaryAdapter->GetDesc1(&desc);
+
+                // Is a software adapter?
+                if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+                    continue;
+
+                // Is this desired vendor?
+                if (secondaryDesiredVendor != 0 && secondaryDesiredVendor != desc.VendorId)
+                    continue;
+
+                // Can create D3D12 device?
+                if (FAILED(D3D12CreateDevice(pSecondaryAdapter.Get(), D3D_FEATURE_LEVEL_11_0, MY_IID_PPV_ARGS(&pSecondaryDevice))))
+                    continue;
+
+                if (g_SecondaryDevice != nullptr)
+                    g_SecondaryDevice->Release();
+
+                g_SecondaryDevice = pSecondaryDevice.Detach();
+                Utility::Printf(L"Selected secondary GPU: %s (%u MB)\n", desc.Description, desc.DedicatedVideoMemory >> 20);
+            }
+        }
     }
 
     if (RequireDXRSupport && !g_Device)
@@ -314,20 +349,120 @@ void Graphics::Initialize(bool RequireDXRSupport)
         WARN_ONCE_IF_NOT(DeveloperModeEnabled, "Enable Developer Mode on Windows 10 to get consistent profiling results");
 
         // Prevent the GPU from overclocking or underclocking to get consistent timings
-        if (DeveloperModeEnabled)
+        if (DeveloperModeEnabled) {
             g_Device->SetStablePowerState(TRUE);
+            g_SecondaryDevice->SetStablePowerState(TRUE);
+        }
     }
-#endif	
+#endif
 
 #if _DEBUG
+    SetDebugInfoQueue(g_Device);
+    SetDebugInfoQueue(g_SecondaryDevice);
+#endif
+
+    // We like to do read-modify-write operations on UAVs during post processing.  To support that, we
+    // need to either have the hardware do typed UAV loads of R11G11B10_FLOAT or we need to manually
+    // decode an R32_UINT representation of the same buffer.  This code determines if we get the hardware
+    // load support.
+    D3D12_FEATURE_DATA_D3D12_OPTIONS FeatureData = {};
+    if (SUCCEEDED(g_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &FeatureData, sizeof(FeatureData))))
+    {
+        if (FeatureData.TypedUAVLoadAdditionalFormats)
+        {
+            D3D12_FEATURE_DATA_FORMAT_SUPPORT Support =
+            {
+                DXGI_FORMAT_R11G11B10_FLOAT, D3D12_FORMAT_SUPPORT1_NONE, D3D12_FORMAT_SUPPORT2_NONE
+            };
+
+            if (SUCCEEDED(g_Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &Support, sizeof(Support))) &&
+                (Support.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
+            {
+                g_bTypedUAVLoadSupport_R11G11B10_FLOAT = true;
+            }
+
+            Support.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+
+            if (SUCCEEDED(g_Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &Support, sizeof(Support))) &&
+                (Support.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
+            {
+                g_bTypedUAVLoadSupport_R16G16B16A16_FLOAT = true;
+            }
+        }
+    }
+
+    g_CommandManager.Create(g_Device);
+    g_SecondaryCommandManager.Create(g_SecondaryDevice);
+
+    // Common state was moved to GraphicsCommon.*
+    InitializeCommonState();
+
+    Display::Initialize();
+
+    GpuTimeManager::Initialize(4096);
+    TemporalEffects::Initialize();
+    PostEffects::Initialize();
+    SSAO::Initialize();
+    TextRenderer::Initialize();
+    GraphRenderer::Initialize();
+    ParticleEffectManager::Initialize(3840, 2160);
+}
+
+void Graphics::Shutdown( void )
+{
+    g_CommandManager.IdleGPU();
+    g_SecondaryCommandManager.IdleGPU();
+
+    CommandContext::DestroyAllContexts();
+    g_CommandManager.Shutdown();
+    g_SecondaryCommandManager.Shutdown();
+    GpuTimeManager::Shutdown();
+    PSO::DestroyAll();
+    RootSignature::DestroyAll();
+    DescriptorAllocator::DestroyAll();
+
+    DestroyCommonState();
+    DestroyRenderingBuffers();
+    TemporalEffects::Shutdown();
+    PostEffects::Shutdown();
+    SSAO::Shutdown();
+    TextRenderer::Shutdown();
+    GraphRenderer::Shutdown();
+    ParticleEffectManager::Shutdown();
+    Display::Shutdown();
+
+#if defined(_GAMING_DESKTOP) && defined(_DEBUG)
+    ID3D12DebugDevice* debugInterface;
+    if (SUCCEEDED(g_Device->QueryInterface(&debugInterface)))
+    {
+        debugInterface->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
+        debugInterface->Release();
+    }
+#endif
+
+    if (g_Device != nullptr)
+    {
+        g_Device->Release();
+        g_Device = nullptr;
+    }
+
+    if (g_SecondaryDevice != nullptr)
+    {
+        g_SecondaryDevice->Release();
+        g_SecondaryDevice = nullptr;
+    }
+}
+
+void Graphics::SetDebugInfoQueue(ID3D12Device* pDevice)
+{
     ID3D12InfoQueue* pInfoQueue = nullptr;
-    if (SUCCEEDED(g_Device->QueryInterface(MY_IID_PPV_ARGS(&pInfoQueue))))
+    if (SUCCEEDED(pDevice->QueryInterface(MY_IID_PPV_ARGS(&pInfoQueue))))
     {
         // Suppress whole categories of messages
         //D3D12_MESSAGE_CATEGORY Categories[] = {};
 
         // Suppress messages based on their severity level
-        D3D12_MESSAGE_SEVERITY Severities[] = 
+        D3D12_MESSAGE_SEVERITY Severities[] =
         {
             D3D12_MESSAGE_SEVERITY_INFO
         };
@@ -369,88 +504,5 @@ void Graphics::Initialize(bool RequireDXRSupport)
 
         pInfoQueue->PushStorageFilter(&NewFilter);
         pInfoQueue->Release();
-    }
-#endif
-
-    // We like to do read-modify-write operations on UAVs during post processing.  To support that, we
-    // need to either have the hardware do typed UAV loads of R11G11B10_FLOAT or we need to manually
-    // decode an R32_UINT representation of the same buffer.  This code determines if we get the hardware
-    // load support.
-    D3D12_FEATURE_DATA_D3D12_OPTIONS FeatureData = {};
-    if (SUCCEEDED(g_Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &FeatureData, sizeof(FeatureData))))
-    {
-        if (FeatureData.TypedUAVLoadAdditionalFormats)
-        {
-            D3D12_FEATURE_DATA_FORMAT_SUPPORT Support =
-            {
-                DXGI_FORMAT_R11G11B10_FLOAT, D3D12_FORMAT_SUPPORT1_NONE, D3D12_FORMAT_SUPPORT2_NONE
-            };
-
-            if (SUCCEEDED(g_Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &Support, sizeof(Support))) &&
-                (Support.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
-            {
-                g_bTypedUAVLoadSupport_R11G11B10_FLOAT = true;
-            }
-
-            Support.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-
-            if (SUCCEEDED(g_Device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &Support, sizeof(Support))) &&
-                (Support.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD) != 0)
-            {
-                g_bTypedUAVLoadSupport_R16G16B16A16_FLOAT = true;
-            }
-        }
-    }
-
-    g_CommandManager.Create(g_Device);
-
-    // Common state was moved to GraphicsCommon.*
-    InitializeCommonState();
-
-    Display::Initialize();
-
-    GpuTimeManager::Initialize(4096);
-    TemporalEffects::Initialize();
-    PostEffects::Initialize();
-    SSAO::Initialize();
-    TextRenderer::Initialize();
-    GraphRenderer::Initialize();
-    ParticleEffectManager::Initialize(3840, 2160);
-}
-
-void Graphics::Shutdown( void )
-{
-    g_CommandManager.IdleGPU();
-
-    CommandContext::DestroyAllContexts();
-    g_CommandManager.Shutdown();
-    GpuTimeManager::Shutdown();
-    PSO::DestroyAll();
-    RootSignature::DestroyAll();
-    DescriptorAllocator::DestroyAll();
-
-    DestroyCommonState();
-    DestroyRenderingBuffers();
-    TemporalEffects::Shutdown();
-    PostEffects::Shutdown();
-    SSAO::Shutdown();
-    TextRenderer::Shutdown();
-    GraphRenderer::Shutdown();
-    ParticleEffectManager::Shutdown();
-    Display::Shutdown();
-
-#if defined(_GAMING_DESKTOP) && defined(_DEBUG)
-    ID3D12DebugDevice* debugInterface;
-    if (SUCCEEDED(g_Device->QueryInterface(&debugInterface)))
-    {
-        debugInterface->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
-        debugInterface->Release();
-    }
-#endif
-
-    if (g_Device != nullptr)
-    {
-        g_Device->Release();
-        g_Device = nullptr;
     }
 }

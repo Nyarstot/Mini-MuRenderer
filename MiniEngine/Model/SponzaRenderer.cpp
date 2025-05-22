@@ -36,6 +36,8 @@
 #include "CompiledShaders/ModelViewerVS.h"
 #include "CompiledShaders/ModelViewerPS.h"
 
+#include "../Core/MultiGPU/DeviceBenchmark.h"
+
 using namespace Math;
 using namespace Graphics;
 
@@ -55,6 +57,10 @@ namespace Sponza
 
     ModelH3D m_Model;
     std::vector<bool> m_pMaterialIsCutout;
+    MultiGPU::SharedResource m_sharedResource;
+
+    MultiGPU::DeviceBenchmarkProvider m_primaryBenchmarkProvider;
+    MultiGPU::DeviceBenchmarkProvider m_secondaryBenchmarkProvider;
 
     Vector3 m_SunDirection;
     ShadowCamera m_SunShadow;
@@ -68,8 +74,14 @@ namespace Sponza
     NumVar ShadowDimZ("Sponza/Lighting/Shadow Dim Z", 3000, 1000, 10000, 100 );
 }
 
-void Sponza::Startup( Camera& Camera )
+void Sponza::Startup( Camera& Camera)
 {
+    m_primaryBenchmarkProvider.Initialize(Graphics::g_Device);
+    m_secondaryBenchmarkProvider.Initialize(Graphics::g_SecondaryDevice);
+
+    auto primaryFps = m_primaryBenchmarkProvider.PerformBenchmark(1);
+    auto secondaryFps = m_secondaryBenchmarkProvider.PerformBenchmark(1);
+
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
     DXGI_FORMAT NormalFormat = g_SceneNormalBuffer.GetFormat();
     DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat();
@@ -155,6 +167,14 @@ void Sponza::Startup( Camera& Camera )
     Camera.SetEyeAtUp( eye, Vector3(kZero), Vector3(kYUnitVector) );
 
     Lighting::CreateRandomLights(m_Model.GetBoundingBox().GetMin(), m_Model.GetBoundingBox().GetMax());
+
+    D3D12_RESOURCE_DESC temp_desc = g_SceneColorBuffer.GetResource()->GetDesc();
+    m_sharedResource.Create(
+        Graphics::g_Device,
+        Graphics::g_SecondaryDevice,
+        L"SomeSharedResource",
+        temp_desc
+    );
 }
 
 const ModelH3D& Sponza::GetModel()
@@ -325,6 +345,7 @@ void Sponza::RenderScene(
     }
 
     SSAO::Render(gfxContext, camera);
+    gfxContext.CopyBuffer(m_sharedResource, g_SceneColorBuffer);
 
     if (!skipDiffusePass)
     {
@@ -340,6 +361,8 @@ void Sponza::RenderScene(
             }
         }
     }
+
+    gfxContext.CopyBuffer(g_SceneColorBuffer, m_sharedResource);
 
     if (!skipShadowMap)
     {
@@ -397,4 +420,12 @@ void Sponza::RenderScene(
             }
         }
     }
+}
+
+void Sponza::RenderGraphStartup(Math::Camera& camera, bool useEMA)
+{
+}
+
+void Sponza::RenderSceneRenderGraph(GraphicsContext& gfxContext, const Math::Camera& camera, const D3D12_VIEWPORT& viewport, const D3D12_RECT& scissors, bool skipDiffusePass, bool skipShadowMap, bool useEMA)
+{
 }
