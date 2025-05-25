@@ -16,6 +16,7 @@
 #include <d3d12.h>
 
 #include "../Core/MultiGPU/SharedResource.h"
+#include "../Core/RenderGraph/RenderGraph.h"
 
 class GraphicsContext;
 class ShadowCamera;
@@ -59,6 +60,7 @@ namespace Sponza
 
     const ModelH3D& GetModel();
 
+    extern RenderGraph::RenderGraph* m_RenderGraph;
     extern Math::Vector3 m_SunDirection;
     extern ShadowCamera m_SunShadow;
     extern ExpVar m_AmbientIntensity;

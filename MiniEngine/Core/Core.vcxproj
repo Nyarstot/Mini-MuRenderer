@@ -120,10 +120,12 @@
     <ClInclude Include="ReadbackBuffer.h" />
     <ClInclude Include="RenderGraph\Base\BaseGraph.h" />
     <ClInclude Include="RenderGraph\Base\Span.h" />
+    <ClInclude Include="RenderGraph\Passes\LambdaRenderPass.h" />
     <ClInclude Include="RenderGraph\RenderGraph.h" />
     <ClInclude Include="RenderGraph\RenderGraphRegistry.h" />
     <ClInclude Include="RenderGraph\RenderGraphResource.h" />
     <ClInclude Include="RenderGraph\RenderPass.h" />
+    <ClInclude Include="RenderGraph\Utils\RenderGraphUtils.h" />
     <ClInclude Include="RootSignature.h" />
     <ClInclude Include="SamplerManager.h" />
     <ClInclude Include="ShadowBuffer.h" />
@@ -189,8 +191,12 @@
     <ClCompile Include="ReadbackBuffer.cpp" />
     <ClCompile Include="RenderGraph\Base\BaseGraph.cpp" />
     <ClCompile Include="RenderGraph\Base\Span.cpp" />
+    <ClCompile Include="RenderGraph\Passes\LambdaRenderPass.cpp" />
+    <ClCompile Include="RenderGraph\RenderGraph.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphRegistry.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphResource.cpp" />
+    <ClCompile Include="RenderGraph\RenderPass.cpp" />
+    <ClCompile Include="RenderGraph\Utils\RenderGraphUtils.cpp" />
     <ClCompile Include="RootSignature.cpp" />
     <ClCompile Include="SamplerManager.cpp" />
     <ClCompile Include="ShadowBuffer.cpp" />

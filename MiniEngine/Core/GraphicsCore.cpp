@@ -358,7 +358,8 @@ void Graphics::Initialize(bool RequireDXRSupport, bool RequireEMASupport)
 
 #if _DEBUG
     SetDebugInfoQueue(g_Device);
-    SetDebugInfoQueue(g_SecondaryDevice);
+    if (RequireEMASupport)
+        SetDebugInfoQueue(g_SecondaryDevice);
 #endif
 
     // We like to do read-modify-write operations on UAVs during post processing.  To support that, we
@@ -392,7 +393,8 @@ void Graphics::Initialize(bool RequireDXRSupport, bool RequireEMASupport)
     }
 
     g_CommandManager.Create(g_Device);
-    g_SecondaryCommandManager.Create(g_SecondaryDevice);
+    if (RequireEMASupport)
+        g_SecondaryCommandManager.Create(g_SecondaryDevice);
 
     // Common state was moved to GraphicsCommon.*
     InitializeCommonState();

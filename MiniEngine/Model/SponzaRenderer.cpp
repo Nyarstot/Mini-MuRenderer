@@ -61,6 +61,7 @@ namespace Sponza
 
     MultiGPU::DeviceBenchmarkProvider m_primaryBenchmarkProvider;
     MultiGPU::DeviceBenchmarkProvider m_secondaryBenchmarkProvider;
+    RenderGraph::RenderGraph* m_RenderGraph;
 
     Vector3 m_SunDirection;
     ShadowCamera m_SunShadow;
@@ -76,12 +77,6 @@ namespace Sponza
 
 void Sponza::Startup( Camera& Camera)
 {
-    m_primaryBenchmarkProvider.Initialize(Graphics::g_Device);
-    m_secondaryBenchmarkProvider.Initialize(Graphics::g_SecondaryDevice);
-
-    auto primaryFps = m_primaryBenchmarkProvider.PerformBenchmark(1);
-    auto secondaryFps = m_secondaryBenchmarkProvider.PerformBenchmark(1);
-
     DXGI_FORMAT ColorFormat = g_SceneColorBuffer.GetFormat();
     DXGI_FORMAT NormalFormat = g_SceneNormalBuffer.GetFormat();
     DXGI_FORMAT DepthFormat = g_SceneDepthBuffer.GetFormat();
@@ -175,6 +170,17 @@ void Sponza::Startup( Camera& Camera)
         L"SomeSharedResource",
         temp_desc
     );
+
+    m_primaryBenchmarkProvider.Initialize(Graphics::g_Device);
+    m_secondaryBenchmarkProvider.Initialize(Graphics::g_SecondaryDevice);
+
+    auto primaryFps = m_primaryBenchmarkProvider.PerformBenchmark(1);
+    auto secondaryFps = m_secondaryBenchmarkProvider.PerformBenchmark(1);
+
+    if (!m_RenderGraph) {
+        m_RenderGraph = new RenderGraph::RenderGraph(L"Sponza Render Graph");
+    }
+
 }
 
 const ModelH3D& Sponza::GetModel()
@@ -345,7 +351,6 @@ void Sponza::RenderScene(
     }
 
     SSAO::Render(gfxContext, camera);
-    gfxContext.CopyBuffer(m_sharedResource, g_SceneColorBuffer);
 
     if (!skipDiffusePass)
     {
@@ -361,8 +366,6 @@ void Sponza::RenderScene(
             }
         }
     }
-
-    gfxContext.CopyBuffer(g_SceneColorBuffer, m_sharedResource);
 
     if (!skipShadowMap)
     {
