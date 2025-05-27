@@ -17,6 +17,7 @@ namespace MultiGPU
         ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
         ID3D12Device* m_parentDevice;
+        UINT m_result;
 
     public:
         DeviceBenchmarkProvider() = default;
@@ -25,6 +26,7 @@ namespace MultiGPU
         void Release();
         void Initialize(ID3D12Device* Device);
         UINT PerformBenchmark(float benchmarkTimeMs);
+        UINT GetBenchmarkResult() const;
 
     };
 }

@@ -19,11 +19,10 @@ namespace RenderGraph
         return (it == m_resourceRegistry.end()) ? false : true;
     }
 
-    ResourceEntry RenderGraphRegistry::GetRegisteredResourceEntry(const std::wstring& name) const
+    ResourceEntry& RenderGraphRegistry::GetRegisteredResourceEntry(const std::wstring& name)
     {
         if (IsResourceRegistered(name)) {
-            ResourceEntry entry = m_resourceRegistry.at(name);
-            return entry;
+            return m_resourceRegistry.at(name);
         }
 
         throw std::runtime_error("Resource entry doesn't exists!");

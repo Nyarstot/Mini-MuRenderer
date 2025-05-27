@@ -1,12 +1,13 @@
 #include "pch.h"
 #include "RenderGraph/RenderGraph.h"
+#include "RenderGraph/RenderGraphAllocator.h"
 #include "GraphicsCore.h"
 
 
 namespace RenderGraph
 {
     RenderGraph::RenderGraph(const std::wstring& name)
-        : BaseGraph<RenderPass, RenderGraphEdgeResourceData>()
+        : BaseGraph<RenderPass, RenderGraphEdgeResourceData>(), m_allocator(65536)
     {
         ASSERT_SUCCEEDED(Graphics::g_Device->CreateFence(
             0, D3D12_FENCE_FLAG_SHARED | D3D12_FENCE_FLAG_SHARED_CROSS_ADAPTER, IID_PPV_ARGS(&m_sharedFence)
@@ -15,7 +16,7 @@ namespace RenderGraph
         m_title = name;
     }
 
-    ResourceEntry& RenderGraph::GetRegisteredResourceEntry(const std::wstring& name) const
+    ResourceEntry& RenderGraph::GetRegisteredResourceEntry(const std::wstring& name)
     {
         return m_resourceRegistry.GetRegisteredResourceEntry(name);
     }
@@ -23,6 +24,16 @@ namespace RenderGraph
     bool RenderGraph::IsResourceRegistered(const std::wstring& name) const
     {
         return m_resourceRegistry.IsResourceRegistered(name);
+    }
+
+    //RenderPass& RenderGraph::AddRenderPass(const std::wstring& name)
+    //{
+    //    //RenderPass* newRenderPass = m_allocator.Construct<RenderPass>(name);
+    //}
+
+    const std::wstring& RenderGraph::GetName() const
+    {
+        return m_title;
     }
 
     void RenderGraph::Setup()
@@ -68,7 +79,7 @@ namespace RenderGraph
         }
     }
 
-    void RenderGraph::Execute(CommandContext& ctx)
+    void RenderGraph::Execute(GraphicsContext& ctx)
     {
         m_fenceValue = 1;
 
@@ -76,6 +87,8 @@ namespace RenderGraph
             auto& node = GetNode(nodeId);
             node.data->Execute(ctx);
         }
+
+        ctx.Finish();
     }
 
     void RenderGraph::Clear()

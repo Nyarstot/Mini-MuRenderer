@@ -39,6 +39,9 @@ namespace Renderer
 
     using namespace Math;
 
+    extern float s_SpecularIBLRange;
+    extern float s_SpecularIBLBias;
+
     extern std::vector<GraphicsPSO> sm_PSOs;
     extern RootSignature m_RootSig;
     extern DescriptorHeap s_TextureHeap;

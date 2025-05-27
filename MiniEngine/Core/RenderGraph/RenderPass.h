@@ -49,7 +49,7 @@ namespace RenderGraph
         const std::wstring& GetName() const;
 
         virtual void Setup() = 0;
-        virtual void Execute(CommandContext& ctx) = 0;
+        virtual void Execute(GraphicsContext& ctx) = 0;
 
     };
 }

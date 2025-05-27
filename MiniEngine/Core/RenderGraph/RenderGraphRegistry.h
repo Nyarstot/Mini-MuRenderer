@@ -113,7 +113,7 @@ namespace RenderGraph
 
         bool IsResourceRegistered(const std::wstring& name) const;
 
-        ResourceEntry GetRegisteredResourceEntry(const std::wstring& name) const;
+        ResourceEntry& GetRegisteredResourceEntry(const std::wstring& name);
         UINT64 GetRegisteredResourceSize(const std::wstring& name) const;
 
     };

@@ -110,7 +110,13 @@ namespace MultiGPU
         Utility::Printf("GPU %s rendered %d frames per %.2f seconds (%.2f FPS)\n",
             deviceName, frameCount, benchmarkTimeMs, fps);
 
+        m_result = frameCount;
         return frameCount;
+    }
+
+    UINT DeviceBenchmarkProvider::GetBenchmarkResult() const
+    {
+        return m_result;
     }
 
 }

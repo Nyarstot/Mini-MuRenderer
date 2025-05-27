@@ -122,6 +122,8 @@
     <ClInclude Include="RenderGraph\Base\Span.h" />
     <ClInclude Include="RenderGraph\Passes\LambdaRenderPass.h" />
     <ClInclude Include="RenderGraph\RenderGraph.h" />
+    <ClInclude Include="RenderGraph\RenderGraphAllocator.h" />
+    <ClInclude Include="RenderGraph\RenderGraphInclude.h" />
     <ClInclude Include="RenderGraph\RenderGraphRegistry.h" />
     <ClInclude Include="RenderGraph\RenderGraphResource.h" />
     <ClInclude Include="RenderGraph\RenderPass.h" />
@@ -193,6 +195,7 @@
     <ClCompile Include="RenderGraph\Base\Span.cpp" />
     <ClCompile Include="RenderGraph\Passes\LambdaRenderPass.cpp" />
     <ClCompile Include="RenderGraph\RenderGraph.cpp" />
+    <ClCompile Include="RenderGraph\RenderGraphAllocator.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphRegistry.cpp" />
     <ClCompile Include="RenderGraph\RenderGraphResource.cpp" />
     <ClCompile Include="RenderGraph\RenderPass.cpp" />

@@ -27,6 +27,7 @@
 
 // From Model
 #include "ModelH3D.h"
+#include "Model.h"
 
 // From ModelViewer
 #include "LightManager.h"
@@ -161,7 +162,7 @@ void Sponza::Startup( Camera& Camera)
     const Vector3 eye = m_Model.GetBoundingBox().GetCenter() + Vector3(modelRadius * 0.5f, 0.0f, 0.0f);
     Camera.SetEyeAtUp( eye, Vector3(kZero), Vector3(kYUnitVector) );
 
-    Lighting::CreateRandomLights(m_Model.GetBoundingBox().GetMin(), m_Model.GetBoundingBox().GetMax());
+    //Lighting::CreateRandomLights(m_Model.GetBoundingBox().GetMin(), m_Model.GetBoundingBox().GetMax());
 
     D3D12_RESOURCE_DESC temp_desc = g_SceneColorBuffer.GetResource()->GetDesc();
     m_sharedResource.Create(
@@ -177,9 +178,9 @@ void Sponza::Startup( Camera& Camera)
     auto primaryFps = m_primaryBenchmarkProvider.PerformBenchmark(1);
     auto secondaryFps = m_secondaryBenchmarkProvider.PerformBenchmark(1);
 
-    if (!m_RenderGraph) {
-        m_RenderGraph = new RenderGraph::RenderGraph(L"Sponza Render Graph");
-    }
+    //if (!m_RenderGraph) {
+    //    m_RenderGraph = new RenderGraph::RenderGraph(L"Sponza Render Graph");
+    //}
 
 }
 
