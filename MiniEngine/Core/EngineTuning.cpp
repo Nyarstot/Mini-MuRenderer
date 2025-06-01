@@ -672,7 +672,7 @@ void EngineTuning::Display( GraphicsContext& Context, float x, float y, float w,
     Text.SetTextSize(20.0f);
 
     VariableGroup::sm_RootGroup.Display( Text, x, sm_SelectedVariable );
-    
+
     EngineProfiling::DisplayPerfGraph(Context);
 
     Text.End();

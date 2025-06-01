@@ -26,6 +26,7 @@ namespace Graphics
     ColorBuffer g_PostEffectsBuffer;
     ColorBuffer g_VelocityBuffer;
     ColorBuffer g_OverlayBuffer;
+    ColorBuffer g_SecondaryOverlay;
     ColorBuffer g_HorizontalBuffer;
 
     ShadowBuffer g_ShadowBuffer;

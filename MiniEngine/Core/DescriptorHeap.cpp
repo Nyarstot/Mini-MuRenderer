@@ -29,7 +29,7 @@ void DescriptorAllocator::DestroyAll(void)
     sm_DescriptorHeapPool.clear();
 }
 
-ID3D12DescriptorHeap* DescriptorAllocator::RequestNewHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type)
+ID3D12DescriptorHeap* DescriptorAllocator::RequestNewHeap(D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Device* Device)
 {
     std::lock_guard<std::mutex> LockGuard(sm_AllocationMutex);
 
@@ -40,21 +40,21 @@ ID3D12DescriptorHeap* DescriptorAllocator::RequestNewHeap(D3D12_DESCRIPTOR_HEAP_
     Desc.NodeMask = 1;
 
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> pHeap;
-    ASSERT_SUCCEEDED(Graphics::g_Device->CreateDescriptorHeap(&Desc, MY_IID_PPV_ARGS(&pHeap)));
+    ASSERT_SUCCEEDED(Device->CreateDescriptorHeap(&Desc, MY_IID_PPV_ARGS(&pHeap)));
     sm_DescriptorHeapPool.emplace_back(pHeap);
     return pHeap.Get();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DescriptorAllocator::Allocate( uint32_t Count )
+D3D12_CPU_DESCRIPTOR_HANDLE DescriptorAllocator::Allocate( uint32_t Count, ID3D12Device* Device)
 {
     if (m_CurrentHeap == nullptr || m_RemainingFreeHandles < Count)
     {
-        m_CurrentHeap = RequestNewHeap(m_Type);
+        m_CurrentHeap = RequestNewHeap(m_Type, Device);
         m_CurrentHandle = m_CurrentHeap->GetCPUDescriptorHandleForHeapStart();
         m_RemainingFreeHandles = sm_NumDescriptorsPerHeap;
 
         if (m_DescriptorSize == 0)
-            m_DescriptorSize = Graphics::g_Device->GetDescriptorHandleIncrementSize(m_Type);
+            m_DescriptorSize = Device->GetDescriptorHandleIncrementSize(m_Type);
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE ret = m_CurrentHandle;

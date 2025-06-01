@@ -105,6 +105,9 @@
     <ClInclude Include="Math\Transform.h" />
     <ClInclude Include="Math\Vector.h" />
     <ClInclude Include="MotionBlur.h" />
+    <ClInclude Include="CGpuTimeManager.h" />
+    <ClInclude Include="MultiGPU\CopyEngine.h" />
+    <ClInclude Include="MultiGPU\CrossAdapterResource.h" />
     <ClInclude Include="MultiGPU\DeviceBenchmark.h" />
     <ClInclude Include="MultiGPU\SharedResource.h" />
     <ClInclude Include="ParticleEffect.h" />
@@ -142,6 +145,7 @@
     <ClInclude Include="Utility.h" />
     <ClInclude Include="Util\CommandLineArg.h" />
     <ClInclude Include="Util\D3D12Utils.h" />
+    <ClInclude Include="MultiGPU\IntegratedGpuTimeManager.h" />
     <ClInclude Include="VectorMath.h" />
   </ItemGroup>
   <ItemGroup>
@@ -178,7 +182,11 @@
     <ClCompile Include="Math\Frustum.cpp" />
     <ClCompile Include="Math\Random.cpp" />
     <ClCompile Include="MotionBlur.cpp" />
+    <ClCompile Include="CGpuTimeManager.cpp" />
+    <ClCompile Include="MultiGPU\CopyEngine.cpp" />
+    <ClCompile Include="MultiGPU\CrossAdapterResource.cpp" />
     <ClCompile Include="MultiGPU\DeviceBenchmark.cpp" />
+    <ClCompile Include="MultiGPU\IntegratedGpuTimeManager.cpp" />
     <ClCompile Include="MultiGPU\SharedResource.cpp" />
     <ClCompile Include="ParticleEffect.cpp" />
     <ClCompile Include="ParticleEffectManager.cpp" />
@@ -387,14 +395,6 @@
     <FxCompile Include="Shaders\PerfGraphVS.hlsl">
       <ShaderType>Vertex</ShaderType>
     </FxCompile>
-    <FxCompile Include="Shaders\PerformanceComputeShader.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">6.2</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">4.0</ShaderModel>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
-      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
-    </FxCompile>
     <FxCompile Include="Shaders\PresentHDRPS.hlsl">
       <ShaderType>Pixel</ShaderType>
     </FxCompile>
@@ -469,9 +469,12 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\Packages\WinPixEventRuntime.1.0.210209001\Include\WinPixEventRuntime;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\Packages\WinPixEventRuntime.1.0.210209001\Include\WinPixEventRuntime;..\..\Packages\DirectXTK12\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_GAMING_DESKTOP;__WRL_NO_DEFAULT_LIB__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <Lib>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\Packages\DirectXTK12\lib\Debug\DirectXTK12.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\..\Packages\WinPixEventRuntime.1.0.240308001\build\WinPixEventRuntime.targets" Condition="Exists('..\..\Packages\WinPixEventRuntime.1.0.240308001\build\WinPixEventRuntime.targets')" />

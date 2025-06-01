@@ -32,6 +32,8 @@
 #include "TemporalEffects.h"
 #include "Display.h"
 
+#include "MultiGPU/IntegratedGpuTimeManager.h"
+
 #pragma comment(lib, "d3d12.lib") 
 
 #ifdef _GAMING_DESKTOP
@@ -56,6 +58,7 @@ namespace Graphics
     CommandListManager g_SecondaryCommandManager;
 
     ContextManager g_ContextManager;
+    ContextManager g_SecondaryContextManager;
 
     D3D_FEATURE_LEVEL g_D3DFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
@@ -313,6 +316,8 @@ void Graphics::Initialize(bool RequireDXRSupport, bool RequireEMASupport)
         }
     }
 
+    std::swap(g_Device, g_SecondaryDevice);
+
     if (RequireDXRSupport && !g_Device)
     {
         Utility::Printf("Unable to find a DXR-capable device. Halting.\n");
@@ -392,6 +397,9 @@ void Graphics::Initialize(bool RequireDXRSupport, bool RequireEMASupport)
         }
     }
 
+    g_Device->SetName(L"Primary Device");
+    g_SecondaryDevice->SetName(L"Secondary Device");
+
     g_CommandManager.Create(g_Device);
     if (RequireEMASupport)
         g_SecondaryCommandManager.Create(g_SecondaryDevice);
@@ -402,6 +410,8 @@ void Graphics::Initialize(bool RequireDXRSupport, bool RequireEMASupport)
     Display::Initialize();
 
     GpuTimeManager::Initialize(4096);
+    IntegratedGpuTimeManager::Initialize(4096);
+
     TemporalEffects::Initialize();
     PostEffects::Initialize();
     SSAO::Initialize();
@@ -418,7 +428,10 @@ void Graphics::Shutdown( void )
     CommandContext::DestroyAllContexts();
     g_CommandManager.Shutdown();
     g_SecondaryCommandManager.Shutdown();
+
     GpuTimeManager::Shutdown();
+    IntegratedGpuTimeManager::Shutdown();
+
     PSO::DestroyAll();
     RootSignature::DestroyAll();
     DescriptorAllocator::DestroyAll();

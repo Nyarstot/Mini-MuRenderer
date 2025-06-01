@@ -57,7 +57,7 @@ void ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format, u
         RTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
         SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
     }
-    else 
+    else
     {
         RTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
         RTVDesc.Texture2D.MipSlice = 0;
@@ -72,8 +72,8 @@ void ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format, u
 
     if (m_SRVHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
     {
-        m_RTVHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-        m_SRVHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        m_RTVHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, Device);
+        m_SRVHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, Device);
     }
 
     ID3D12Resource* Resource = m_pResource.Get();

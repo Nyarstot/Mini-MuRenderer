@@ -1,39 +1,17 @@
-//
-// Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-// Developed by Minigraph
-//
-// Author:  James Stanard 
-//
-
 #include "pch.h"
-#include "GpuTimeManager.h"
 #include "GraphicsCore.h"
 #include "CommandContext.h"
 #include "CommandListManager.h"
+#include "CGpuTimeManager.h"
 
-namespace
-{
-    ID3D12QueryHeap* sm_QueryHeap = nullptr;
-    ID3D12Resource* sm_ReadBackBuffer = nullptr;
-    uint64_t* sm_TimeStampBuffer = nullptr;
-    uint64_t sm_Fence = 0;
-    uint32_t sm_MaxNumTimers = 0;
-    uint32_t sm_NumTimers = 1;
-    uint64_t sm_ValidTimeStart = 0;
-    uint64_t sm_ValidTimeEnd = 0;
-    double sm_GpuTickDelta = 0.0;
-}
 
-void GpuTimeManager::Initialize(uint32_t MaxNumTimers)
+void CGpuTimeManager::Initialize(CommandListManager* cmdListManager, ID3D12Device* Device, uint32_t MaxNumTimers)
 {
+    m_parentCommandListManager = cmdListManager;
+    m_parentDevice = Device;
+
     uint64_t GpuFrequency;
-    Graphics::g_CommandManager.GetCommandQueue()->GetTimestampFrequency(&GpuFrequency);
+    m_parentCommandListManager->GetCommandQueue()->GetTimestampFrequency(&GpuFrequency);
     sm_GpuTickDelta = 1.0 / static_cast<double>(GpuFrequency);
 
     D3D12_HEAP_PROPERTIES HeapProps;
@@ -56,8 +34,8 @@ void GpuTimeManager::Initialize(uint32_t MaxNumTimers)
     BufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     BufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-    ASSERT_SUCCEEDED(Graphics::g_Device->CreateCommittedResource( &HeapProps, D3D12_HEAP_FLAG_NONE, &BufferDesc,
-        D3D12_RESOURCE_STATE_COPY_DEST, nullptr, MY_IID_PPV_ARGS(&sm_ReadBackBuffer) ));
+    ASSERT_SUCCEEDED(m_parentDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &BufferDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST, nullptr, MY_IID_PPV_ARGS(&sm_ReadBackBuffer)));
     sm_ReadBackBuffer->SetName(L"GpuTimeStamp Buffer");
 
     D3D12_QUERY_HEAP_DESC QueryHeapDesc;
@@ -70,7 +48,7 @@ void GpuTimeManager::Initialize(uint32_t MaxNumTimers)
     sm_MaxNumTimers = (uint32_t)MaxNumTimers;
 }
 
-void GpuTimeManager::Shutdown()
+void CGpuTimeManager::Shutdown()
 {
     if (sm_ReadBackBuffer != nullptr)
         sm_ReadBackBuffer->Release();
@@ -79,24 +57,24 @@ void GpuTimeManager::Shutdown()
         sm_QueryHeap->Release();
 }
 
-uint32_t GpuTimeManager::NewTimer(void)
+uint32_t CGpuTimeManager::NewTimer(void)
 {
     return sm_NumTimers++;
 }
 
-void GpuTimeManager::StartTimer(CommandContext& Context, uint32_t TimerIdx)
+void CGpuTimeManager::StartTimer(CommandContext& Context, uint32_t TimerIdx)
 {
     Context.InsertTimeStamp(sm_QueryHeap, TimerIdx * 2);
 }
 
-void GpuTimeManager::StopTimer(CommandContext& Context, uint32_t TimerIdx)
+void CGpuTimeManager::StopTimer(CommandContext& Context, uint32_t TimerIdx)
 {
     Context.InsertTimeStamp(sm_QueryHeap, TimerIdx * 2 + 1);
 }
 
-void GpuTimeManager::BeginReadBack(void)
+void CGpuTimeManager::BeginReadBack(void)
 {
-    Graphics::g_CommandManager.WaitForFence(sm_Fence);
+    m_parentCommandListManager->WaitForFence(sm_Fence);
 
     D3D12_RANGE Range;
     Range.Begin = 0;
@@ -114,7 +92,7 @@ void GpuTimeManager::BeginReadBack(void)
     }
 }
 
-void GpuTimeManager::EndReadBack(void)
+void CGpuTimeManager::EndReadBack(void)
 {
     // Unmap with an empty range to indicate nothing was written by the CPU
     D3D12_RANGE EmptyRange = {};
@@ -128,7 +106,7 @@ void GpuTimeManager::EndReadBack(void)
     sm_Fence = Context.Finish();
 }
 
-float GpuTimeManager::GetTime(uint32_t TimerIdx)
+float CGpuTimeManager::GetTime(uint32_t TimerIdx)
 {
     ASSERT(sm_TimeStampBuffer != nullptr, "Time stamp readback buffer is not mapped");
     ASSERT(TimerIdx < sm_NumTimers, "Invalid GPU timer index");
@@ -136,9 +114,8 @@ float GpuTimeManager::GetTime(uint32_t TimerIdx)
     uint64_t TimeStamp1 = sm_TimeStampBuffer[TimerIdx * 2];
     uint64_t TimeStamp2 = sm_TimeStampBuffer[TimerIdx * 2 + 1];
 
-    if (TimeStamp1 < sm_ValidTimeStart || TimeStamp2 > sm_ValidTimeEnd || TimeStamp2 <= TimeStamp1 )
+    if (TimeStamp1 < sm_ValidTimeStart || TimeStamp2 > sm_ValidTimeEnd || TimeStamp2 <= TimeStamp1)
         return 0.0f;
 
     return static_cast<float>(sm_GpuTickDelta * (TimeStamp2 - TimeStamp1));
 }
-

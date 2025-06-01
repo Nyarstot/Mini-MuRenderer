@@ -64,7 +64,7 @@ class ContextManager
 public:
     ContextManager(void) {}
 
-    CommandContext* AllocateContext(D3D12_COMMAND_LIST_TYPE Type);
+    CommandContext* AllocateContext(D3D12_COMMAND_LIST_TYPE Type, CommandListManager* CommandListManager, ID3D12Device* Device);
     void FreeContext(CommandContext*);
     void DestroyAllContexts();
 
@@ -96,7 +96,13 @@ public:
 
     static void DestroyAllContexts(void);
 
-    static CommandContext& Begin(const std::wstring ID = L"");
+    static CommandContext& Begin(const std::wstring ID = L"",
+        CommandListManager* CmdListManager = &Graphics::g_CommandManager,
+        ID3D12Device* Device = Graphics::g_Device);
+
+    static CommandContext& Begin(D3D12_COMMAND_LIST_TYPE Type, const std::wstring ID = L"",
+        CommandListManager* CmdListManager = &Graphics::g_CommandManager,
+        ID3D12Device* Device = Graphics::g_Device);
 
     // Flush existing commands to the GPU but keep the context alive
     uint64_t Flush( bool WaitForCompletion = false );
@@ -105,7 +111,7 @@ public:
     uint64_t Finish( bool WaitForCompletion = false );
 
     // Prepare to render by reserving a command list and command allocator
-    void Initialize(void);
+    void Initialize(CommandListManager* CommandListManger, ID3D12Device* Device);
 
     GraphicsContext& GetGraphicsContext() {
         ASSERT(m_Type != D3D12_COMMAND_LIST_TYPE_COMPUTE, "Cannot convert async compute context to graphics");
@@ -167,6 +173,8 @@ protected:
     void BindDescriptorHeaps( void );
 
     CommandListManager* m_OwningManager;
+    ID3D12Device* m_OwningDevice;
+
     ID3D12GraphicsCommandList* m_CommandList;
     ID3D12CommandAllocator* m_CurrentAllocator;
 
@@ -195,9 +203,18 @@ class GraphicsContext : public CommandContext
 {
 public:
 
-    static GraphicsContext& Begin(const std::wstring& ID = L"")
+    static GraphicsContext& Begin(const std::wstring& ID = L"",
+        CommandListManager* CmdListManager = &Graphics::g_CommandManager,
+        ID3D12Device* Device = Graphics::g_Device)
     {
-        return CommandContext::Begin(ID).GetGraphicsContext();
+        return CommandContext::Begin(ID, CmdListManager, Device).GetGraphicsContext();
+    }
+
+    static GraphicsContext& Begin(D3D12_COMMAND_LIST_TYPE Type, const std::wstring& ID = L"",
+        CommandListManager* CmdListManager = &Graphics::g_CommandManager,
+        ID3D12Device* Device = Graphics::g_Device)
+    {
+        return CommandContext::Begin(Type, ID, CmdListManager, Device).GetGraphicsContext();
     }
 
     void ClearUAV( GpuBuffer& Target );
@@ -271,7 +288,9 @@ class ComputeContext : public CommandContext
 {
 public:
 
-    static ComputeContext& Begin(const std::wstring& ID = L"", bool Async = false);
+    static ComputeContext& Begin(const std::wstring& ID = L"", bool Async = false,
+        CommandListManager* CmdListManager = &Graphics::g_CommandManager,
+        ID3D12Device* Device = Graphics::g_Device);
 
     void ClearUAV( GpuBuffer& Target );
     void ClearUAV( ColorBuffer& Target );

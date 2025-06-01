@@ -12,10 +12,12 @@
 //
 
 #include "pch.h"
-#include "GpuTimeManager.h"
 #include "GraphicsCore.h"
 #include "CommandContext.h"
 #include "CommandListManager.h"
+
+#include "MultiGPU/IntegratedGpuTimeManager.h"
+
 
 namespace
 {
@@ -30,10 +32,10 @@ namespace
     double sm_GpuTickDelta = 0.0;
 }
 
-void GpuTimeManager::Initialize(uint32_t MaxNumTimers)
+void IntegratedGpuTimeManager::Initialize(uint32_t MaxNumTimers)
 {
     uint64_t GpuFrequency;
-    Graphics::g_CommandManager.GetCommandQueue()->GetTimestampFrequency(&GpuFrequency);
+    Graphics::g_SecondaryCommandManager.GetCommandQueue()->GetTimestampFrequency(&GpuFrequency);
     sm_GpuTickDelta = 1.0 / static_cast<double>(GpuFrequency);
 
     D3D12_HEAP_PROPERTIES HeapProps;
@@ -56,21 +58,21 @@ void GpuTimeManager::Initialize(uint32_t MaxNumTimers)
     BufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     BufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-    ASSERT_SUCCEEDED(Graphics::g_Device->CreateCommittedResource( &HeapProps, D3D12_HEAP_FLAG_NONE, &BufferDesc,
-        D3D12_RESOURCE_STATE_COPY_DEST, nullptr, MY_IID_PPV_ARGS(&sm_ReadBackBuffer) ));
+    ASSERT_SUCCEEDED(Graphics::g_SecondaryDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &BufferDesc,
+        D3D12_RESOURCE_STATE_COPY_DEST, nullptr, MY_IID_PPV_ARGS(&sm_ReadBackBuffer)));
     sm_ReadBackBuffer->SetName(L"GpuTimeStamp Buffer");
 
     D3D12_QUERY_HEAP_DESC QueryHeapDesc;
     QueryHeapDesc.Count = MaxNumTimers * 2;
     QueryHeapDesc.NodeMask = 1;
     QueryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-    ASSERT_SUCCEEDED(Graphics::g_Device->CreateQueryHeap(&QueryHeapDesc, MY_IID_PPV_ARGS(&sm_QueryHeap)));
+    ASSERT_SUCCEEDED(Graphics::g_SecondaryDevice->CreateQueryHeap(&QueryHeapDesc, MY_IID_PPV_ARGS(&sm_QueryHeap)));
     sm_QueryHeap->SetName(L"GpuTimeStamp QueryHeap");
 
     sm_MaxNumTimers = (uint32_t)MaxNumTimers;
 }
 
-void GpuTimeManager::Shutdown()
+void IntegratedGpuTimeManager::Shutdown()
 {
     if (sm_ReadBackBuffer != nullptr)
         sm_ReadBackBuffer->Release();
@@ -79,22 +81,22 @@ void GpuTimeManager::Shutdown()
         sm_QueryHeap->Release();
 }
 
-uint32_t GpuTimeManager::NewTimer(void)
+uint32_t IntegratedGpuTimeManager::NewTimer(void)
 {
     return sm_NumTimers++;
 }
 
-void GpuTimeManager::StartTimer(CommandContext& Context, uint32_t TimerIdx)
+void IntegratedGpuTimeManager::StartTimer(CommandContext& Context, uint32_t TimerIdx)
 {
     Context.InsertTimeStamp(sm_QueryHeap, TimerIdx * 2);
 }
 
-void GpuTimeManager::StopTimer(CommandContext& Context, uint32_t TimerIdx)
+void IntegratedGpuTimeManager::StopTimer(CommandContext& Context, uint32_t TimerIdx)
 {
     Context.InsertTimeStamp(sm_QueryHeap, TimerIdx * 2 + 1);
 }
 
-void GpuTimeManager::BeginReadBack(void)
+void IntegratedGpuTimeManager::BeginReadBack(void)
 {
     Graphics::g_CommandManager.WaitForFence(sm_Fence);
 
@@ -114,7 +116,7 @@ void GpuTimeManager::BeginReadBack(void)
     }
 }
 
-void GpuTimeManager::EndReadBack(void)
+void IntegratedGpuTimeManager::EndReadBack(void)
 {
     // Unmap with an empty range to indicate nothing was written by the CPU
     D3D12_RANGE EmptyRange = {};
@@ -128,7 +130,7 @@ void GpuTimeManager::EndReadBack(void)
     sm_Fence = Context.Finish();
 }
 
-float GpuTimeManager::GetTime(uint32_t TimerIdx)
+float IntegratedGpuTimeManager::GetTime(uint32_t TimerIdx)
 {
     ASSERT(sm_TimeStampBuffer != nullptr, "Time stamp readback buffer is not mapped");
     ASSERT(TimerIdx < sm_NumTimers, "Invalid GPU timer index");
@@ -136,7 +138,7 @@ float GpuTimeManager::GetTime(uint32_t TimerIdx)
     uint64_t TimeStamp1 = sm_TimeStampBuffer[TimerIdx * 2];
     uint64_t TimeStamp2 = sm_TimeStampBuffer[TimerIdx * 2 + 1];
 
-    if (TimeStamp1 < sm_ValidTimeStart || TimeStamp2 > sm_ValidTimeEnd || TimeStamp2 <= TimeStamp1 )
+    if (TimeStamp1 < sm_ValidTimeStart || TimeStamp2 > sm_ValidTimeEnd || TimeStamp2 <= TimeStamp1)
         return 0.0f;
 
     return static_cast<float>(sm_GpuTickDelta * (TimeStamp2 - TimeStamp1));

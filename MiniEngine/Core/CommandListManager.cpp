@@ -152,6 +152,7 @@ bool CommandQueue::IsFenceComplete(uint64_t FenceValue)
 namespace Graphics
 {
     extern CommandListManager g_CommandManager;
+    extern CommandListManager g_SecondaryCommandManager;
 }
 
 void CommandQueue::StallForFence(uint64_t FenceValue)

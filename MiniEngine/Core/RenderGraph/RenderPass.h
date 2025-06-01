@@ -17,7 +17,7 @@ namespace RenderGraph
     {
         RGCrossAdapterIndex execAdapterIndex;
         std::vector<RGCrossAdapterIndex> dependentAdapters;
-        bool multiGPUAllowed;
+        bool multiGPUAllowed = false;
         ComPtr<ID3D12Fence> sharedFence;
     };
 

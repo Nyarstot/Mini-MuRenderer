@@ -43,7 +43,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\Model;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Model;..\..\Packages\DirectXTK12\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link Condition="'$(Configuration)'=='Debug'">
       <AdditionalOptions>/nodefaultlib:MSVCRT %(AdditionalOptions)</AdditionalOptions>
@@ -356,7 +356,7 @@
   <ItemDefinitionGroup>
     <Link>
       <AdditionalLibraryDirectories>..\..\Packages\zlib-msvc-x64.1.2.11.8900\build\native\lib_release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>zlibstatic.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>zlibstatic.lib;..\..\Packages\DirectXTK12\lib\Debug\DirectXTK12.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ImportGroup Label="ExtensionTargets">

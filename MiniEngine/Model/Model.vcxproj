@@ -57,6 +57,12 @@
     <Manifest>
       <EnableDPIAwareness>true</EnableDPIAwareness>
     </Manifest>
+    <ClCompile>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\Packages\DirectXTK12\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\Packages\DirectXTK12\lib\Debug\DirectXTK12.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Animation.h" />

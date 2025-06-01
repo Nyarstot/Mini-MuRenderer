@@ -22,7 +22,7 @@ namespace EngineProfiling
 {
     void Update();
 
-    void BeginBlock(const std::wstring& name, CommandContext* Context = nullptr);
+    void BeginBlock(const std::wstring& name, CommandContext* Context = nullptr, bool OnSecondaryDevice = false);
     void EndBlock(CommandContext* Context = nullptr);
 
     void DisplayFrameRate(TextContext& Text);

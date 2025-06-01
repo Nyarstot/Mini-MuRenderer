@@ -5,7 +5,7 @@
 
 namespace MultiGPU
 {
-    void SharedResource::CreateInternalTextureResource(ID3D12Device* Device, const std::wstring& name, ID3D12Heap* Heap, UINT HeapOffset, const D3D12_RESOURCE_DESC& ResourceDesc, const D3D12_RESOURCE_STATES& InitialState, D3D12_CLEAR_VALUE ClearValue, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
+    void SharedResource::CreateInternalTextureResource(ID3D12Device* Device, const std::wstring& name, ID3D12Heap* Heap, UINT HeapOffset, D3D12_RESOURCE_DESC& ResourceDesc, const D3D12_RESOURCE_STATES& InitialState, const D3D12_CLEAR_VALUE* ClearValue, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
     {
         this->Destroy();
 
@@ -15,14 +15,14 @@ namespace MultiGPU
             HeapOffset,
             &ResourceDesc,
             InitialState,
-            nullptr,
+            ClearValue,
             IID_PPV_ARGS(m_pResource.GetAddressOf())
         ));
 
         this->SetInitialState(InitialState, VidMemPtr);
     }
 
-    void SharedResource::CreateInternalSharedTextureResource(ID3D12Device* Device, const std::wstring& name, ID3D12Heap* Heap, UINT HeapOffset, const D3D12_RESOURCE_DESC& ResourceDesc, const D3D12_RESOURCE_STATES& InitialState, D3D12_CLEAR_VALUE ClearValue, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
+    void SharedResource::CreateInternalSharedTextureResource(ID3D12Device* Device, const std::wstring& name, ID3D12Heap* Heap, UINT HeapOffset, D3D12_RESOURCE_DESC& ResourceDesc, const D3D12_RESOURCE_STATES& InitialState, const D3D12_CLEAR_VALUE* ClearValue, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
     {
         m_pSharedResource->Destroy();
 
@@ -32,7 +32,7 @@ namespace MultiGPU
             HeapOffset,
             &ResourceDesc,
             InitialState,
-            nullptr,
+            ClearValue,
             IID_PPV_ARGS(m_pSharedResource->GetAddressOf())
         ));
 
@@ -50,24 +50,28 @@ namespace MultiGPU
         m_pSharedResource->Destroy();
     }
 
-    void SharedResource::Create(ID3D12Device* PrimaryDevice, ID3D12Device* SecondaryDevice, const std::wstring& Name, const D3D12_RESOURCE_DESC& ResourceDesc, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
+    void SharedResource::Create(ID3D12Device* PrimaryDevice, ID3D12Device* SecondaryDevice, const std::wstring& Name, D3D12_RESOURCE_DESC& ResourceDesc, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
     {
-        D3D12_RESOURCE_DESC crossResourceDesc   = ResourceDesc;
-        crossResourceDesc.Flags                 = D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
-        crossResourceDesc.Layout                = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-        D3D12_CLEAR_VALUE ClearValue = {};
-        ClearValue.Format = DXGI_FORMAT_D16_UNORM;
+        ResourceDesc.Flags                 = D3D12_RESOURCE_FLAG_ALLOW_CROSS_ADAPTER;
+        ResourceDesc.Layout                = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT layout;
+        PrimaryDevice->GetCopyableFootprints(&ResourceDesc, 0, 1, 0, &layout, nullptr, nullptr, nullptr);
         auto textureSize = D3D12Utils::Align(layout.Footprint.RowPitch * layout.Footprint.Height);
 
-        CD3DX12_HEAP_DESC heapDesc(
-            textureSize,
-            D3D12_HEAP_TYPE_DEFAULT,
-            0,
-            D3D12_HEAP_FLAG_SHARED | D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER
-        );
+        //CD3DX12_HEAP_DESC heapDesc(
+        //    textureSize,
+        //    D3D12_HEAP_TYPE_DEFAULT,
+        //    0,
+        //    D3D12_HEAP_FLAG_SHARED | D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER
+        //);
+
+        CD3DX12_HEAP_DESC heapDesc = {};
+        heapDesc.SizeInBytes = textureSize;
+        heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+        heapDesc.Properties.CreationNodeMask = 1;
+        heapDesc.Properties.VisibleNodeMask = 1;
+        heapDesc.Flags = D3D12_HEAP_FLAG_SHARED | D3D12_HEAP_FLAG_SHARED_CROSS_ADAPTER;
 
         ASSERT_SUCCEEDED(PrimaryDevice->CreateHeap(&heapDesc, IID_PPV_ARGS(&m_primaryHeap)));
 
@@ -84,7 +88,9 @@ namespace MultiGPU
         CloseHandle(heapHandle);
         ASSERT_SUCCEEDED(openSharedHandleResult);
 
-        CreateInternalTextureResource(PrimaryDevice, Name, m_primaryHeap.Get(), 0, crossResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, ClearValue, VidMemPtr);
-        CreateInternalSharedTextureResource(SecondaryDevice, Name + L"_Shared", m_sharedHeap.Get(), 0, crossResourceDesc, D3D12_RESOURCE_STATE_COMMON, ClearValue, VidMemPtr);
+        CreateInternalTextureResource(PrimaryDevice, Name, m_primaryHeap.Get(), 0, ResourceDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, VidMemPtr);
+        CreateInternalSharedTextureResource(SecondaryDevice, Name + L"_Shared", m_sharedHeap.Get(), 0, ResourceDesc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, VidMemPtr);
+
+        
     }
 }

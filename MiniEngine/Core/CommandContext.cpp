@@ -31,12 +31,15 @@ using namespace Graphics;
 
 void ContextManager::DestroyAllContexts(void)
 {
-    for (uint32_t i = 0; i < 4; ++i)
+    for (uint32_t i = 0; i < sm_ContextPool->size(); ++i)
         sm_ContextPool[i].clear();
 }
 
-CommandContext* ContextManager::AllocateContext(D3D12_COMMAND_LIST_TYPE Type)
+CommandContext* ContextManager::AllocateContext(D3D12_COMMAND_LIST_TYPE Type, CommandListManager* CommandListManager, ID3D12Device* Device)
 {
+    if (Device == Graphics::g_SecondaryDevice)
+        Utility::Printf("Device == g_secDevice\n");
+
     std::lock_guard<std::mutex> LockGuard(sm_ContextAllocationMutex);
 
     auto& AvailableContexts = sm_AvailableContexts[Type];
@@ -46,7 +49,7 @@ CommandContext* ContextManager::AllocateContext(D3D12_COMMAND_LIST_TYPE Type)
     {
         ret = new CommandContext(Type);
         sm_ContextPool[Type].emplace_back(ret);
-        ret->Initialize();
+        ret->Initialize(CommandListManager, Device);
     }
     else
     {
@@ -75,22 +78,70 @@ void CommandContext::DestroyAllContexts(void)
     g_ContextManager.DestroyAllContexts();
 }
 
-CommandContext& CommandContext::Begin( const std::wstring ID )
+CommandContext& CommandContext::Begin( const std::wstring ID, CommandListManager* CmdListManager, ID3D12Device* Device)
 {
-    CommandContext* NewContext = g_ContextManager.AllocateContext(D3D12_COMMAND_LIST_TYPE_DIRECT);
+    ContextManager* contextManager = nullptr;
+    bool onSecondDevice = false;
+
+    if (Device != g_Device) {
+        contextManager = &g_SecondaryContextManager;
+        onSecondDevice = true;
+    }
+    else
+    {
+        onSecondDevice = false;
+        contextManager = &g_ContextManager;
+    }
+
+    CommandContext* NewContext = contextManager->AllocateContext(D3D12_COMMAND_LIST_TYPE_DIRECT, CmdListManager, Device);
     NewContext->SetID(ID);
     if (ID.length() > 0)
-        EngineProfiling::BeginBlock(ID, NewContext);
+        EngineProfiling::BeginBlock(ID, NewContext, onSecondDevice);
     return *NewContext;
 }
 
-ComputeContext& ComputeContext::Begin(const std::wstring& ID, bool Async)
+CommandContext& CommandContext::Begin(D3D12_COMMAND_LIST_TYPE Type, const std::wstring ID, CommandListManager* CmdListManager, ID3D12Device* Device)
 {
-    ComputeContext& NewContext = g_ContextManager.AllocateContext(
-        Async ? D3D12_COMMAND_LIST_TYPE_COMPUTE : D3D12_COMMAND_LIST_TYPE_DIRECT)->GetComputeContext();
+    ContextManager* contextManager = nullptr;
+    bool onSecondDevice = false;
+
+    if (Device != g_Device) {
+        contextManager = &g_SecondaryContextManager;
+        onSecondDevice = true;
+    }
+    else
+    {
+        onSecondDevice = false;
+        contextManager = &g_ContextManager;
+    }
+
+    CommandContext* newContext = contextManager->AllocateContext(Type, CmdListManager, Device);
+    newContext->SetID(ID);
+    if (ID.length() > 0)
+        EngineProfiling::BeginBlock(ID, newContext, onSecondDevice);
+    return *newContext;
+}
+
+ComputeContext& ComputeContext::Begin(const std::wstring& ID, bool Async, CommandListManager* CmdListManager, ID3D12Device* Device)
+{
+    ContextManager* contextManager = nullptr;
+    bool onSecondDevice = false;
+
+    if (Device != g_Device) {
+        contextManager = &g_SecondaryContextManager;
+        onSecondDevice = true;
+    }
+    else
+    {
+        onSecondDevice = false;
+        contextManager = &g_ContextManager;
+    }
+
+    ComputeContext& NewContext = contextManager->AllocateContext(
+        Async ? D3D12_COMMAND_LIST_TYPE_COMPUTE : D3D12_COMMAND_LIST_TYPE_DIRECT, CmdListManager, Device)->GetComputeContext();
     NewContext.SetID(ID);
     if (ID.length() > 0)
-        EngineProfiling::BeginBlock(ID, &NewContext);
+        EngineProfiling::BeginBlock(ID, &NewContext, onSecondDevice);
     return NewContext;
 }
 
@@ -100,10 +151,10 @@ uint64_t CommandContext::Flush(bool WaitForCompletion)
 
     ASSERT(m_CurrentAllocator != nullptr);
 
-    uint64_t FenceValue = g_CommandManager.GetQueue(m_Type).ExecuteCommandList(m_CommandList);
+    uint64_t FenceValue = m_OwningManager->GetQueue(m_Type).ExecuteCommandList(m_CommandList);
 
     if (WaitForCompletion)
-        g_CommandManager.WaitForFence(FenceValue);
+        m_OwningManager->WaitForFence(FenceValue);
 
     //
     // Reset the command list and restore previous state
@@ -140,7 +191,7 @@ uint64_t CommandContext::Finish( bool WaitForCompletion )
 
     ASSERT(m_CurrentAllocator != nullptr);
 
-    CommandQueue& Queue = g_CommandManager.GetQueue(m_Type);
+    CommandQueue& Queue = m_OwningManager->GetQueue(m_Type);
 
     uint64_t FenceValue = Queue.ExecuteCommandList(m_CommandList);
     Queue.DiscardAllocator(FenceValue, m_CurrentAllocator);
@@ -152,7 +203,7 @@ uint64_t CommandContext::Finish( bool WaitForCompletion )
     m_DynamicSamplerDescriptorHeap.CleanupUsedHeaps(FenceValue);
 
     if (WaitForCompletion)
-        g_CommandManager.WaitForFence(FenceValue);
+        m_OwningManager->WaitForFence(FenceValue);
 
     g_ContextManager.FreeContext(this);
 
@@ -167,6 +218,7 @@ CommandContext::CommandContext(D3D12_COMMAND_LIST_TYPE Type) :
     m_GpuLinearAllocator(kGpuExclusive)
 {
     m_OwningManager = nullptr;
+    m_OwningDevice = nullptr;
     m_CommandList = nullptr;
     m_CurrentAllocator = nullptr;
     ZeroMemory(m_CurrentDescriptorHeaps, sizeof(m_CurrentDescriptorHeaps));
@@ -183,9 +235,11 @@ CommandContext::~CommandContext( void )
         m_CommandList->Release();
 }
 
-void CommandContext::Initialize(void)
+void CommandContext::Initialize(CommandListManager* CommandListManger, ID3D12Device* Device)
 {
-    g_CommandManager.CreateNewCommandList(m_Type, &m_CommandList, &m_CurrentAllocator);
+    m_OwningManager = CommandListManger;
+    m_OwningDevice = Device;
+    m_OwningManager->CreateNewCommandList(m_Type, &m_CommandList, &m_CurrentAllocator);
 }
 
 void CommandContext::Reset( void )
@@ -193,7 +247,7 @@ void CommandContext::Reset( void )
     // We only call Reset() on previously freed contexts.  The command list persists, but we must
     // request a new allocator.
     ASSERT(m_CommandList != nullptr && m_CurrentAllocator == nullptr);
-    m_CurrentAllocator = g_CommandManager.GetQueue(m_Type).RequestAllocator();
+    m_CurrentAllocator = m_OwningManager->GetQueue(m_Type).RequestAllocator();
     m_CommandList->Reset(m_CurrentAllocator, nullptr);
 
     m_CurGraphicsRootSignature = nullptr;
@@ -297,6 +351,7 @@ void ComputeContext::ClearUAV( ColorBuffer& Target )
 void GraphicsContext::ClearColor( ColorBuffer& Target, D3D12_RECT* Rect )
 {
     FlushResourceBarriers();
+    auto targetRtv = Target.GetRTV();
     m_CommandList->ClearRenderTargetView(Target.GetRTV(), Target.GetClearColor().GetPtr(), (Rect == nullptr) ? 0 : 1, Rect);
 }
 
@@ -548,7 +603,7 @@ uint32_t CommandContext::ReadbackTexture(ReadbackBuffer& DstBuffer, PixelBuffer&
 
     // The footprint may depend on the device of the resource, but we assume there is only one device.
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT PlacedFootprint;
-    g_Device->GetCopyableFootprints(&SrcBuffer.GetResource()->GetDesc(), 0, 1, 0,
+    m_OwningDevice->GetCopyableFootprints(&SrcBuffer.GetResource()->GetDesc(), 0, 1, 0,
         &PlacedFootprint, nullptr, nullptr, &CopySize);
 
     DstBuffer.Create(L"Readback", (uint32_t)CopySize, 1);

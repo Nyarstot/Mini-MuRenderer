@@ -43,15 +43,18 @@ namespace Graphics
 
     extern CommandListManager g_CommandManager;
     extern CommandListManager g_SecondaryCommandManager;
+
     extern ContextManager g_ContextManager;
+    extern ContextManager g_SecondaryContextManager;
 
     extern D3D_FEATURE_LEVEL g_D3DFeatureLevel;
     extern bool g_bTypedUAVLoadSupport_R11G11B10_FLOAT;
     extern bool g_bTypedUAVLoadSupport_R16G16B16A16_FLOAT;
 
     extern DescriptorAllocator g_DescriptorAllocator[];
-    inline D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 )
+
+    inline D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 , ID3D12Device* Device = g_Device)
     {
-        return g_DescriptorAllocator[Type].Allocate(Count);
+        return g_DescriptorAllocator[Type].Allocate(Count, Device);
     }
 }

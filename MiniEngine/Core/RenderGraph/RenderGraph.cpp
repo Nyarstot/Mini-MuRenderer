@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "RenderGraph/RenderGraph.h"
 #include "RenderGraph/RenderGraphAllocator.h"
+
+#include "MultiGPU/CopyEngine.h"
+
 #include "GraphicsCore.h"
 
 
@@ -85,10 +88,35 @@ namespace RenderGraph
 
         for (std::size_t nodeId : m_executionOrder) {
             auto& node = GetNode(nodeId);
-            node.data->Execute(ctx);
+            Utility::Printf("Execute pass: %s\n", node.data->GetName().c_str());
+
+            if (node.data->IsMultiAdapterAllowed()) {
+
+                Graphics::g_CommandManager.GetQueue().StallForFence(1);
+
+                auto contextName = node.data->GetName() + L"_MultiAdapterContext";
+                GraphicsContext& context = GraphicsContext::Begin(contextName, &Graphics::g_SecondaryCommandManager, Graphics::g_SecondaryDevice);
+                node.data->Execute(context);
+
+                Graphics::g_SecondaryCommandManager.GetQueue().StallForFence(1);
+
+                ID3D12CommandList* ppCopyCommandList[] = { MultiGPU::CopyEngine::GetCopyCommandList().Get() };
+                MultiGPU::CopyEngine::GetCopyQueue()->ExecuteCommandLists(_countof(ppCopyCommandList), ppCopyCommandList);
+
+                Graphics::g_SecondaryCommandManager.GetQueue().IncrementFence();
+                context.Finish();
+
+                Graphics::g_CommandManager.GetQueue().IncrementFence();
+
+            }
+            else {
+
+                node.data->Execute(ctx);
+            }
         }
 
-        ctx.Finish();
+        ctx.Finish(true);
+
     }
 
     void RenderGraph::Clear()

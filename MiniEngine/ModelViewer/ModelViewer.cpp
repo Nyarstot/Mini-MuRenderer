@@ -26,7 +26,12 @@
 
 #include "../Core/MultiGPU/DeviceBenchmark.h"
 #include "../Core/MultiGPU/SharedResource.h"
+#include "../Core/MultiGPU/CrossAdapterResource.h"
+#include "../Core/MultiGPU/CopyEngine.h"
+
 #include "../Core/RenderGraph/RenderGraphInclude.h"
+
+#include "DirectXTK12/GraphicsMemory.h"
 
 using namespace GameCore;
 using namespace Math;
@@ -48,14 +53,21 @@ private:
     ShadowCamera m_SunShadowCamera;
     RenderGraph::RenderGraph* m_renderGraph;
 
-    bool m_AllowEMASupport = false;
+    bool m_AllowEMASupport = true;
     MultiGPU::DeviceBenchmarkProvider m_PrimaryBenchmarkProvider;
     MultiGPU::DeviceBenchmarkProvider m_SecondaryBenchmarkProvider;
+    MultiGPU::CopyEngine m_copyEngine;
+
+    std::unique_ptr<DirectX::GraphicsMemory> m_primaryGraphicsMemory;
+    std::unique_ptr<DirectX::GraphicsMemory> m_secondaryGraphicsMemory;
 
 private:
     void RenderGraphStartup(void);
 
 public:
+    MultiGPU::SharedResource m_sharedOverlayBuffer;
+    MultiGPU::CrossAdapterResource m_sharedOverlayTexture;
+
     MuExample() = default;
     ~MuExample() = default;
 
@@ -64,11 +76,6 @@ public:
 
     virtual void Update(float deltaT) override;
     virtual void RenderScene(void) override;
-
-public:
-    void MeshRenderPass(CommandContext& ctx);
-
-
 
 };
 
@@ -212,6 +219,10 @@ void MuExample::Startup(void)
     }
 
     // Perform MultiGPU benchmarks
+    m_copyEngine.Initialize();
+
+    m_primaryGraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(Graphics::g_Device);
+    m_secondaryGraphicsMemory = std::make_unique<DirectX::GraphicsMemory>(Graphics::g_SecondaryDevice);
 
     if (m_AllowEMASupport) {
         m_PrimaryBenchmarkProvider.Initialize(Graphics::g_Device);
@@ -230,6 +241,26 @@ void MuExample::RenderGraphStartup(void)
     auto sceneColorBufferRes    = m_renderGraph->RegisterExternalResource<ColorBuffer>(L"SceneColorBuffer", &g_SceneColorBuffer);
     auto ssaoFullScreenRes      = m_renderGraph->RegisterExternalResource<ColorBuffer>(L"SSAOFullScreen", &g_SSAOFullScreen);
     auto shadowBufferRes        = m_renderGraph->RegisterExternalResource<ShadowBuffer>(L"ShadowBuffer", &g_ShadowBuffer);
+    auto overlayBuffer          = m_renderGraph->RegisterExternalResource<ColorBuffer>(L"OverlayBuffer", &Graphics::g_OverlayBuffer);
+
+    m_sharedOverlayBuffer.Create(
+        Graphics::g_Device,
+        Graphics::g_SecondaryDevice,
+        L"OverlayBuffer",
+        Graphics::g_OverlayBuffer.GetResource()->GetDesc()
+    );
+
+    //m_sharedOverlayTexture.Create(
+    //    Graphics::g_Device,
+    //    Graphics::g_SecondaryDevice,
+    //    Graphics::g_OverlayBuffer
+    //);
+
+    //m_crossOverlayBuffer.Create(
+    //    Graphics::g_Device,
+    //    Graphics::g_SecondaryDevice,
+    //    g_OverlayBuffer
+    //);
 }
 
 namespace Graphics
@@ -308,10 +339,11 @@ void MuExample::RenderScene(void)
     m_ModelInstance.Render(sorter);
     sorter.Sort();
 
-    auto sceneDepthBufferRes = m_renderGraph->GetRegisteredResourceEntry(L"SceneDepthBuffer");
-    auto sceneColorBufferRes = m_renderGraph->GetRegisteredResourceEntry(L"SceneColorBuffer");
-    auto ssaoFullScreenRes = m_renderGraph->GetRegisteredResourceEntry(L"SSAOFullScreen");
-    auto shadowBufferRes = m_renderGraph->GetRegisteredResourceEntry(L"ShadowBuffer");
+    auto sceneDepthBufferRes    = m_renderGraph->GetRegisteredResourceEntry(L"SceneDepthBuffer");
+    auto sceneColorBufferRes    = m_renderGraph->GetRegisteredResourceEntry(L"SceneColorBuffer");
+    auto ssaoFullScreenRes      = m_renderGraph->GetRegisteredResourceEntry(L"SSAOFullScreen");
+    auto shadowBufferRes        = m_renderGraph->GetRegisteredResourceEntry(L"ShadowBuffer");
+    auto overlayBufferRes       = m_renderGraph->GetRegisteredResourceEntry(L"OverlayBuffer");
 
     auto depthPrePass = std::make_unique<RenderGraph::LambdaContextRenderPass>(
         L"DepthPrePass", m_renderGraph,
@@ -380,6 +412,7 @@ void MuExample::RenderScene(void)
         WriteToSpan({ &sceneDepthBufferRes }),
         [&](GraphicsContext& ctx) {
             ScopedTimer _prof(L"TAA Pass", ctx);
+
             TemporalEffects::ResolveImage(ctx);
 
             ParticleEffectManager::Update(ctx.GetComputeContext(), Graphics::GetFrameTime());
@@ -387,12 +420,46 @@ void MuExample::RenderScene(void)
         }
     );
 
+    auto uiPass = std::make_unique<RenderGraph::LambdaContextRenderPass>(
+        L"UIPass", m_renderGraph,
+        ReadFromSpan({ sceneColorBufferRes }),
+        WriteToSpan({ &sceneColorBufferRes }),
+        [&](GraphicsContext& ctx) {
+
+            //ScopedTimer _prof(L"UIPass", ctx);
+
+            MultiGPU::CopyEngine::CopyResource(g_OverlayBuffer, m_sharedOverlayBuffer);
+
+            ctx.TransitionResource(g_OverlayBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
+            ctx.ClearColor(g_OverlayBuffer);
+            ctx.SetRenderTarget(g_OverlayBuffer.GetRTV());
+            ctx.SetViewportAndScissor(0, 0, g_OverlayBuffer.GetWidth(), g_OverlayBuffer.GetHeight());
+            EngineTuning::Display(ctx, 10.0f, 40.0f, 1900.0f, 1040.0f);
+
+            MultiGPU::CopyEngine::CopyResource(m_sharedOverlayBuffer, g_OverlayBuffer);
+
+        }
+    );
+
+    auto skyboxPass = std::make_unique<RenderGraph::LambdaContextRenderPass>(
+        L"SkyBoxPass", m_renderGraph,
+        ReadFromSpan({ sceneColorBufferRes }),
+        WriteToSpan({ &sceneColorBufferRes }),
+        [&](GraphicsContext& ctx) {
+            Renderer::DrawSkybox(ctx, m_Camera, viewport, scissor);
+        }
+    );
+
+    //uiPass->SetMultiAdapterAllowed(true, RenderGraph::RGCrossAdapterIndex::Primary);
+
     std::size_t depthPrePassId = m_renderGraph->AddNode(std::move(depthPrePass));
     std::size_t ssaoPassId = m_renderGraph->AddNode(std::move(SSAOPass));
     std::size_t sunShadowPassId = m_renderGraph->AddNode(std::move(sunShadowPass));
     std::size_t colorPassId = m_renderGraph->AddNode(std::move(colorPass));
     std::size_t motionBlurPassId = m_renderGraph->AddNode(std::move(motionBlurPass));
     std::size_t taaPassId = m_renderGraph->AddNode(std::move(taaPass));
+    std::size_t uiPassId = m_renderGraph->AddNode(std::move(uiPass));
+    std::size_t skyBoxPassId = m_renderGraph->AddNode(std::move(skyboxPass));
 
     m_renderGraph->AddEdge(
         depthPrePassId,
@@ -421,6 +488,18 @@ void MuExample::RenderScene(void)
     m_renderGraph->AddEdge(
         motionBlurPassId,
         taaPassId,
+        nullptr
+    );
+
+    m_renderGraph->AddEdge(
+        taaPassId,
+        uiPassId,
+        nullptr
+    );
+
+    m_renderGraph->AddEdge(
+        uiPassId,
+        skyBoxPassId,
         nullptr
     );
 

@@ -399,6 +399,7 @@ private:
     StatHistory m_GpuTime;
     bool m_IsExpanded;
     GpuTimer m_GpuTimer;
+    GpuTimer m_dGpuTimer;
     bool m_IsGraphed;
     GraphHandle m_GraphHandle;
     static StatHistory s_TotalCpuTime;
@@ -422,9 +423,9 @@ bool NestedTimingTree::sm_CursorOnGraph = false;
 namespace EngineProfiling
 {
     BoolVar DrawFrameRate("Display Frame Rate", true);
-    BoolVar DrawProfiler("Display Profiler", false);
+    BoolVar DrawProfiler("Display Profiler", true);
     //BoolVar DrawPerfGraph("Display Performance Graph", false);
-    const bool DrawPerfGraph = false;
+    const bool DrawPerfGraph = true;
     
     void Update( void )
     {
@@ -436,9 +437,11 @@ namespace EngineProfiling
         NestedTimingTree::UpdateTimes();
     }
 
-    void BeginBlock(const wstring& name, CommandContext* Context)
+    void BeginBlock(const wstring& name, CommandContext* Context, bool OnSecondaryDevice)
     {
-        NestedTimingTree::PushProfilingMarker(name, Context);
+        if (!OnSecondaryDevice)
+            NestedTimingTree::PushProfilingMarker(name, Context);
+        return;
     }
 
     void EndBlock(CommandContext* Context)

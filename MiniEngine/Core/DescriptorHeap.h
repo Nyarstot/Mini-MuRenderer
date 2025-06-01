@@ -30,7 +30,7 @@ public:
         m_CurrentHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE Allocate( uint32_t Count );
+    D3D12_CPU_DESCRIPTOR_HANDLE Allocate( uint32_t Count, ID3D12Device* Device);
 
     static void DestroyAll(void);
 
@@ -39,7 +39,7 @@ protected:
     static const uint32_t sm_NumDescriptorsPerHeap = 256;
     static std::mutex sm_AllocationMutex;
     static std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> sm_DescriptorHeapPool;
-    static ID3D12DescriptorHeap* RequestNewHeap( D3D12_DESCRIPTOR_HEAP_TYPE Type );
+    static ID3D12DescriptorHeap* RequestNewHeap( D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Device* Device);
 
     D3D12_DESCRIPTOR_HEAP_TYPE m_Type;
     ID3D12DescriptorHeap* m_CurrentHeap;
