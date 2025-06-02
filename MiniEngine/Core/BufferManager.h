@@ -26,6 +26,7 @@ namespace Graphics
     extern ColorBuffer g_SceneNormalBuffer; // R16G16B16A16_FLOAT
     extern ColorBuffer g_PostEffectsBuffer; // R32_UINT (to support Read-Modify-Write with a UAV)
     extern ColorBuffer g_OverlayBuffer;     // R8G8B8A8_UNORM
+    extern ColorBuffer g_dOverlayBuffer;
     extern ColorBuffer g_HorizontalBuffer;  // For separable (bicubic) upsampling
 
     extern ColorBuffer g_VelocityBuffer;    // R10G10B10  (3D velocity)

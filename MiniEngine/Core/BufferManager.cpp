@@ -26,6 +26,7 @@ namespace Graphics
     ColorBuffer g_PostEffectsBuffer;
     ColorBuffer g_VelocityBuffer;
     ColorBuffer g_OverlayBuffer;
+    ColorBuffer g_dOverlayBuffer;
     ColorBuffer g_SecondaryOverlay;
     ColorBuffer g_HorizontalBuffer;
 
@@ -228,6 +229,7 @@ void Graphics::InitializeRenderingBuffers( uint32_t bufferWidth, uint32_t buffer
         esram.PopStack();
 
         g_OverlayBuffer.Create( L"UI Overlay", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R8G8B8A8_UNORM, esram );
+        g_dOverlayBuffer.Create(L"UI Xyeta", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R8G8B8A8_UNORM, esram, Graphics::g_SecondaryDevice);
         g_HorizontalBuffer.Create( L"Bicubic Intermediate", g_DisplayWidth, bufferHeight, 1, DefaultHdrColorFormat, esram );
 
     esram.PopStack(); // End final image

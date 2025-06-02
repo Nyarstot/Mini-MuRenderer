@@ -52,9 +52,15 @@ namespace Graphics
     extern bool g_bTypedUAVLoadSupport_R16G16B16A16_FLOAT;
 
     extern DescriptorAllocator g_DescriptorAllocator[];
+    extern DescriptorAllocator g_SecondaryDescriptorAllocator[];
 
     inline D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptor( D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1 , ID3D12Device* Device = g_Device)
     {
         return g_DescriptorAllocator[Type].Allocate(Count, Device);
+    }
+
+    inline D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptorSecondary(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1, ID3D12Device* Device = g_SecondaryDevice)
+    {
+        return g_SecondaryDescriptorAllocator[Type].Allocate(Count, Device);
     }
 }

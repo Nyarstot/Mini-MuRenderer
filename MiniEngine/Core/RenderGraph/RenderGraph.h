@@ -64,6 +64,7 @@ namespace RenderGraph
         RenderGraphRegistry m_resourceRegistry;
         RenderGraphAllocator m_allocator;
 
+        bool m_supportEMA = false;
         ComPtr<ID3D12Fence> m_sharedFence;
         UINT64 m_fenceValue = 1;
 
@@ -75,6 +76,7 @@ namespace RenderGraph
         bool IsResourceRegistered(const std::wstring& name) const;
         const std::wstring& GetName() const;
 
+        void SetEMASupport(bool emaSupport);
 
         void Setup();
         void Build();

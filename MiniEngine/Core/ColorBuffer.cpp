@@ -72,8 +72,16 @@ void ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format, u
 
     if (m_SRVHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
     {
-        m_RTVHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, Device);
-        m_SRVHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, Device);
+        if (Device != Graphics::g_Device)
+        {
+            m_RTVHandle = Graphics::AllocateDescriptorSecondary(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
+            m_SRVHandle = Graphics::AllocateDescriptorSecondary(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+        }
+        else
+        {
+            m_RTVHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1);
+            m_SRVHandle = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+        }
     }
 
     ID3D12Resource* Resource = m_pResource.Get();
@@ -90,8 +98,15 @@ void ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format, u
     // Create the UAVs for each mip level (RWTexture2D)
     for (uint32_t i = 0; i < NumMips; ++i)
     {
-        if (m_UAVHandle[i].ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
-            m_UAVHandle[i] = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        if (Device != Graphics::g_Device) {
+            if (m_UAVHandle[i].ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+                m_UAVHandle[i] = Graphics::AllocateDescriptorSecondary(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        }
+        else
+        {
+            if (m_UAVHandle[i].ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+                m_UAVHandle[i] = Graphics::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        }
 
         Device->CreateUnorderedAccessView(Resource, nullptr, &UAVDesc, m_UAVHandle[i]);
 
@@ -111,7 +126,7 @@ void ColorBuffer::CreateFromSwapChain( const std::wstring& Name, ID3D12Resource*
 }
 
 void ColorBuffer::Create(const std::wstring& Name, uint32_t Width, uint32_t Height, uint32_t NumMips,
-    DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMem)
+    DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMem, ID3D12Device* Device)
 {
     NumMips = (NumMips == 0 ? ComputeNumMips(Width, Height) : NumMips);
     D3D12_RESOURCE_FLAGS Flags = CombineResourceFlags();
@@ -127,14 +142,14 @@ void ColorBuffer::Create(const std::wstring& Name, uint32_t Width, uint32_t Heig
     ClearValue.Color[2] = m_ClearColor.B();
     ClearValue.Color[3] = m_ClearColor.A();
 
-    CreateTextureResource(Graphics::g_Device, Name, ResourceDesc, ClearValue, VidMem);
-    CreateDerivedViews(Graphics::g_Device, Format, 1, NumMips);
+    CreateTextureResource(Device, Name, ResourceDesc, ClearValue, VidMem);
+    CreateDerivedViews(Device, Format, 1, NumMips);
 }
 
 void ColorBuffer::Create(const std::wstring& Name, uint32_t Width, uint32_t Height, uint32_t NumMips,
-    DXGI_FORMAT Format, EsramAllocator&)
+    DXGI_FORMAT Format, EsramAllocator&, ID3D12Device* Device)
 {
-    Create(Name, Width, Height, NumMips, Format);
+    Create(Name, Width, Height, NumMips, Format, D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN, Device);
 }
 
 void ColorBuffer::CreateArray( const std::wstring& Name, uint32_t Width, uint32_t Height, uint32_t ArrayCount,

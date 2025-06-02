@@ -70,6 +70,14 @@ namespace Graphics
         D3D12_DESCRIPTOR_HEAP_TYPE_DSV
     };
 
+    DescriptorAllocator g_SecondaryDescriptorAllocator[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES] =
+    {
+        D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+        D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+        D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+        D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+    };
+
     static const uint32_t vendorID_Nvidia   = 0x10DE;
     static const uint32_t vendorID_AMD      = 0x1002;
     static const uint32_t vendorID_Intel    = 0x8086;

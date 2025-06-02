@@ -230,6 +230,8 @@ void MuExample::Startup(void)
 
         m_PrimaryBenchmarkProvider.PerformBenchmark(1);
         m_SecondaryBenchmarkProvider.PerformBenchmark(1);
+
+        m_renderGraph->SetEMASupport(true);
     }
 }
 
@@ -250,11 +252,11 @@ void MuExample::RenderGraphStartup(void)
         Graphics::g_OverlayBuffer.GetResource()->GetDesc()
     );
 
-    //m_sharedOverlayTexture.Create(
-    //    Graphics::g_Device,
-    //    Graphics::g_SecondaryDevice,
-    //    Graphics::g_OverlayBuffer
-    //);
+    m_sharedOverlayTexture.Create(
+        Graphics::g_Device,
+        Graphics::g_SecondaryDevice,
+        Graphics::g_OverlayBuffer
+    );
 
     //m_crossOverlayBuffer.Create(
     //    Graphics::g_Device,
@@ -428,7 +430,7 @@ void MuExample::RenderScene(void)
 
             //ScopedTimer _prof(L"UIPass", ctx);
 
-            MultiGPU::CopyEngine::CopyResource(g_OverlayBuffer, m_sharedOverlayBuffer);
+            //MultiGPU::CopyEngine::CopyResource(g_OverlayBuffer, m_sharedOverlayBuffer);
 
             ctx.TransitionResource(g_OverlayBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET, true);
             ctx.ClearColor(g_OverlayBuffer);
@@ -436,7 +438,7 @@ void MuExample::RenderScene(void)
             ctx.SetViewportAndScissor(0, 0, g_OverlayBuffer.GetWidth(), g_OverlayBuffer.GetHeight());
             EngineTuning::Display(ctx, 10.0f, 40.0f, 1900.0f, 1040.0f);
 
-            MultiGPU::CopyEngine::CopyResource(m_sharedOverlayBuffer, g_OverlayBuffer);
+            //MultiGPU::CopyEngine::CopyResource(m_sharedOverlayBuffer, g_OverlayBuffer);
 
         }
     );

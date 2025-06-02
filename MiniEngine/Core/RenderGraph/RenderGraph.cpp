@@ -39,6 +39,11 @@ namespace RenderGraph
         return m_title;
     }
 
+    void RenderGraph::SetEMASupport(bool emaSupport)
+    {
+        m_supportEMA = emaSupport;
+    }
+
     void RenderGraph::Setup()
     {
     }
@@ -90,7 +95,7 @@ namespace RenderGraph
             auto& node = GetNode(nodeId);
             Utility::Printf("Execute pass: %s\n", node.data->GetName().c_str());
 
-            if (node.data->IsMultiAdapterAllowed()) {
+            if (node.data->IsMultiAdapterAllowed() && m_supportEMA) {
 
                 Graphics::g_CommandManager.GetQueue().StallForFence(1);
 
