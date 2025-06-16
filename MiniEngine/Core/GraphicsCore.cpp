@@ -324,7 +324,7 @@ void Graphics::Initialize(bool RequireDXRSupport, bool RequireEMASupport)
         }
     }
 
-    std::swap(g_Device, g_SecondaryDevice);
+    //std::swap(g_Device, g_SecondaryDevice);
 
     if (RequireDXRSupport && !g_Device)
     {

@@ -41,7 +41,40 @@ namespace MultiGPU
         ASSERT_SUCCEEDED(s_copyAllocator->Reset());
         ASSERT_SUCCEEDED(s_copyCommandList->Reset(s_copyAllocator.Get(), nullptr));
 
+        s_copyCommandList->ResourceBarrier(
+            1, &CD3DX12_RESOURCE_BARRIER::Transition(
+                dest.GetResource(),
+                D3D12_RESOURCE_STATE_COMMON,
+                D3D12_RESOURCE_STATE_COPY_DEST
+            )
+        );
+
+        s_copyCommandList->ResourceBarrier(
+            1, &CD3DX12_RESOURCE_BARRIER::Transition(
+                src.GetResource(),
+                D3D12_RESOURCE_STATE_COMMON,
+                D3D12_RESOURCE_STATE_COPY_SOURCE
+            )
+        );
+
         s_copyCommandList->CopyResource(dest.GetResource(), src.GetResource());
+
+        s_copyCommandList->ResourceBarrier(
+            1, &CD3DX12_RESOURCE_BARRIER::Transition(
+                dest.GetResource(),
+                D3D12_RESOURCE_STATE_COPY_DEST,
+                D3D12_RESOURCE_STATE_COMMON
+            )
+        );
+
+        s_copyCommandList->ResourceBarrier(
+            1, &CD3DX12_RESOURCE_BARRIER::Transition(
+                src.GetResource(),
+                D3D12_RESOURCE_STATE_COPY_SOURCE,
+                D3D12_RESOURCE_STATE_COMMON
+            )
+        );
+
         ASSERT_SUCCEEDED(s_copyCommandList->Close());
     }
 }
